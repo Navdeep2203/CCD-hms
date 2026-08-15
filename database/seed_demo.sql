@@ -1,8 +1,10 @@
 -- =============================================================
--- Hotel Management System - Demo seed data
+-- Hotel Management System - PostgreSQL demo seed data
 -- Run after complete_schema.sql.
 -- Demo password for all seeded accounts: admin123
 -- =============================================================
+
+BEGIN;
 
 INSERT INTO roles (role_name) VALUES ('ROLE_ADMIN');
 INSERT INTO roles (role_name) VALUES ('ROLE_MANAGER');
@@ -47,7 +49,11 @@ FROM users u, departments d
 WHERE u.email = 'manager@hotel.com' AND d.department_name = 'Front Office';
 
 UPDATE departments
-SET head_manager_id = (SELECT manager_id FROM managers WHERE user_id = (SELECT user_id FROM users WHERE email = 'manager@hotel.com'))
+SET head_manager_id = (
+    SELECT manager_id
+    FROM managers
+    WHERE user_id = (SELECT user_id FROM users WHERE email = 'manager@hotel.com')
+)
 WHERE department_name = 'Front Office';
 
 INSERT INTO staff (user_id, department_id, manager_id, job_description, salary)
@@ -91,12 +97,12 @@ INSERT INTO services (service_name, price) VALUES ('Airport Pickup', 1800);
 INSERT INTO services (service_name, price) VALUES ('Spa Session', 2500);
 
 INSERT INTO bookings (customer_id, room_id, booking_date, check_in_date, check_out_date, booking_status)
-SELECT c.customer_id, r.room_id, SYSDATE - 4, SYSDATE - 1, SYSDATE + 2, 'CHECKED_IN'
+SELECT c.customer_id, r.room_id, CURRENT_DATE - INTERVAL '4 days', CURRENT_DATE - INTERVAL '1 day', CURRENT_DATE + INTERVAL '2 days', 'CHECKED_IN'
 FROM customers c, users u, rooms r
 WHERE c.user_id = u.user_id AND u.email = 'customer@hotel.com' AND r.room_number = 201;
 
 INSERT INTO bookings (customer_id, room_id, booking_date, check_in_date, check_out_date, booking_status)
-SELECT c.customer_id, r.room_id, SYSDATE - 2, SYSDATE + 3, SYSDATE + 6, 'APPROVED'
+SELECT c.customer_id, r.room_id, CURRENT_DATE - INTERVAL '2 days', CURRENT_DATE + INTERVAL '3 days', CURRENT_DATE + INTERVAL '6 days', 'APPROVED'
 FROM customers c, users u, rooms r
 WHERE c.user_id = u.user_id AND u.email = 'customer@hotel.com' AND r.room_number = 102;
 
@@ -106,19 +112,18 @@ FROM bookings b, services s
 WHERE b.booking_status = 'CHECKED_IN' AND s.service_name = 'Room Dining';
 
 INSERT INTO invoices (booking_id, total_amount, tax, generated_date)
-SELECT b.booking_id, 19600, 2352, SYSDATE
+SELECT b.booking_id, 19600, 2352, CURRENT_DATE
 FROM bookings b
 WHERE b.booking_status = 'CHECKED_IN';
 
 INSERT INTO payments (booking_id, method_id, amount, payment_date, status)
-SELECT b.booking_id, pm.method_id, 8000, SYSDATE, 'COMPLETED'
+SELECT b.booking_id, pm.method_id, 8000, CURRENT_DATE, 'COMPLETED'
 FROM bookings b, payment_methods pm
 WHERE b.booking_status = 'CHECKED_IN' AND pm.method_name = 'UPI';
 
 INSERT INTO room_maintenance (room_id, staff_id, description, maintenance_date, status)
-SELECT r.room_id, s.staff_id, 'Air conditioning inspection', SYSDATE, 'IN_PROGRESS'
+SELECT r.room_id, s.staff_id, 'Air conditioning inspection', CURRENT_DATE, 'IN_PROGRESS'
 FROM rooms r, staff s
 WHERE r.room_number = 202;
 
 COMMIT;
-

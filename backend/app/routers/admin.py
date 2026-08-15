@@ -27,7 +27,7 @@ def create_department(payload: DepartmentRequest) -> dict:
         """
         INSERT INTO departments (department_name, head_manager_id)
         VALUES (:department_name, :head_manager_id)
-        RETURNING department_id INTO :new_id
+        RETURNING department_id
         """,
         payload.model_dump(),
     )

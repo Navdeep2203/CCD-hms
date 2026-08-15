@@ -48,7 +48,7 @@ def create_service_usage(payload: ServiceRequest, user: dict = Depends(get_curre
         """
         INSERT INTO service_usage (booking_id, service_id, quantity, total_price)
         VALUES (:booking_id, :service_id, :quantity, :total_price)
-        RETURNING usage_id INTO :new_id
+        RETURNING usage_id
         """,
         {**payload.model_dump(), "total_price": total_price},
     )
@@ -69,7 +69,7 @@ def create_service(payload: dict) -> dict:
         """
         INSERT INTO services (service_name, price)
         VALUES (:service_name, :price)
-        RETURNING service_id INTO :new_id
+        RETURNING service_id
         """,
         payload,
     )

@@ -51,8 +51,8 @@ def create_booking(payload: BookingRequest, user: dict = Depends(require_roles("
         FROM bookings
         WHERE room_id = :room_id
           AND booking_status IN ('APPROVED', 'CHECKED_IN', 'CHECKIN_PENDING')
-          AND NOT (check_out_date <= TO_DATE(:check_in_date, 'YYYY-MM-DD')
-                   OR check_in_date >= TO_DATE(:check_out_date, 'YYYY-MM-DD'))
+          AND NOT (check_out_date <= CAST(:check_in_date AS DATE)
+                   OR check_in_date >= CAST(:check_out_date AS DATE))
         """,
         payload.model_dump(),
     )
@@ -65,9 +65,9 @@ def create_booking(payload: BookingRequest, user: dict = Depends(require_roles("
     booking_id = execute_returning_id(
         """
         INSERT INTO bookings (customer_id, room_id, booking_date, check_in_date, check_out_date, booking_status)
-        VALUES (:customer_id, :room_id, SYSDATE, TO_DATE(:check_in_date, 'YYYY-MM-DD'),
-                TO_DATE(:check_out_date, 'YYYY-MM-DD'), 'PENDING')
-        RETURNING booking_id INTO :new_id
+        VALUES (:customer_id, :room_id, CURRENT_DATE, CAST(:check_in_date AS DATE),
+                CAST(:check_out_date AS DATE), 'PENDING')
+        RETURNING booking_id
         """,
         {**payload.model_dump(), "customer_id": customer_id},
     )
@@ -99,4 +99,3 @@ def update_booking_status(booking_id: int, payload: StatusRequest, user: dict = 
     elif payload.status in ("CHECKED_OUT", "CANCELLED", "REJECTED"):
         execute("UPDATE rooms SET status = 'AVAILABLE' WHERE room_id = :room_id", {"room_id": booking["room_id"]})
     return fetch_one(BOOKING_SELECT + " WHERE b.booking_id = :booking_id", {"booking_id": booking_id})
-

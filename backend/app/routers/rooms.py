@@ -35,8 +35,8 @@ def list_rooms(
                 SELECT 1 FROM bookings b
                 WHERE b.room_id = r.room_id
                   AND b.booking_status IN ('APPROVED', 'CHECKED_IN', 'CHECKIN_PENDING')
-                  AND NOT (b.check_out_date <= TO_DATE(:check_in, 'YYYY-MM-DD')
-                           OR b.check_in_date >= TO_DATE(:check_out, 'YYYY-MM-DD'))
+                  AND NOT (b.check_out_date <= CAST(:check_in AS DATE)
+                           OR b.check_in_date >= CAST(:check_out AS DATE))
             )
             """
         )
@@ -59,7 +59,7 @@ def create_room_type(payload: RoomTypeRequest) -> dict:
         """
         INSERT INTO room_types (type_name, capacity, price_per_night, description)
         VALUES (:type_name, :capacity, :price_per_night, :description)
-        RETURNING room_type_id INTO :new_id
+        RETURNING room_type_id
         """,
         payload.model_dump(),
     )
@@ -72,7 +72,7 @@ def create_room(payload: RoomRequest) -> dict:
         """
         INSERT INTO rooms (room_number, room_type_id, floor, status)
         VALUES (:room_number, :room_type_id, :floor, :status)
-        RETURNING room_id INTO :new_id
+        RETURNING room_id
         """,
         payload.model_dump(),
     )
@@ -108,4 +108,3 @@ def delete_room(room_id: int) -> dict:
     if affected == 0:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Room not found")
     return {"deleted": True}
-

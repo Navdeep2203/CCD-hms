@@ -15,10 +15,15 @@ def overview(user: dict = Depends(get_current_user)) -> dict:
     maintenance_rooms = fetch_one("SELECT COUNT(*) AS value FROM rooms WHERE status = 'MAINTENANCE'")["value"]
     pending_bookings = fetch_one("SELECT COUNT(*) AS value FROM bookings WHERE booking_status = 'PENDING'")["value"]
     today_revenue = fetch_one(
-        "SELECT NVL(SUM(amount), 0) AS value FROM payments WHERE TRUNC(payment_date) = TRUNC(SYSDATE)"
+        "SELECT COALESCE(SUM(amount), 0) AS value FROM payments WHERE payment_date = CURRENT_DATE"
     )["value"]
     month_revenue = fetch_one(
-        "SELECT NVL(SUM(amount), 0) AS value FROM payments WHERE TRUNC(payment_date, 'MM') = TRUNC(SYSDATE, 'MM')"
+        """
+        SELECT COALESCE(SUM(amount), 0) AS value
+        FROM payments
+        WHERE payment_date >= date_trunc('month', CURRENT_DATE)::date
+          AND payment_date < (date_trunc('month', CURRENT_DATE) + INTERVAL '1 month')::date
+        """
     )["value"]
     recent_bookings = fetch_all(
         """
@@ -30,7 +35,7 @@ def overview(user: dict = Depends(get_current_user)) -> dict:
         JOIN rooms r ON r.room_id = b.room_id
         JOIN room_types rt ON rt.room_type_id = r.room_type_id
         ORDER BY b.booking_id DESC
-        FETCH FIRST 8 ROWS ONLY
+        LIMIT 8
         """
     )
     return {
@@ -43,4 +48,3 @@ def overview(user: dict = Depends(get_current_user)) -> dict:
         "month_revenue": month_revenue,
         "recent_bookings": recent_bookings,
     }
-

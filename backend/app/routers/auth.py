@@ -70,8 +70,8 @@ def register_customer(payload: RegisterCustomerRequest) -> TokenResponse:
     user_id = execute_returning_id(
         """
         INSERT INTO users (email, password_hash, name, phone_country_code, phone_number, is_active)
-        VALUES (:email, :password_hash, :name, :phone_country_code, :phone_number, 1)
-        RETURNING user_id INTO :new_id
+        VALUES (:email, :password_hash, :name, :phone_country_code, :phone_number, TRUE)
+        RETURNING user_id
         """,
         {
             "email": payload.email,
@@ -102,4 +102,3 @@ def register_customer(payload: RegisterCustomerRequest) -> TokenResponse:
     token = create_access_token(str(user_id), claims)
     user.update(claims)
     return TokenResponse(access_token=token, user=user)
-

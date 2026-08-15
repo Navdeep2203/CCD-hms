@@ -11,8 +11,8 @@ router = APIRouter()
 INVOICE_SELECT = """
 SELECT i.invoice_id, i.booking_id, i.total_amount, i.tax, i.generated_date,
        u.name AS customer_name, r.room_number, b.check_in_date, b.check_out_date,
-       b.booking_status, NVL(paid.amount_paid, 0) AS amount_paid,
-       (i.total_amount + i.tax - NVL(paid.amount_paid, 0)) AS balance_due
+       b.booking_status, COALESCE(paid.amount_paid, 0) AS amount_paid,
+       (i.total_amount + i.tax - COALESCE(paid.amount_paid, 0)) AS balance_due
 FROM invoices i
 JOIN bookings b ON b.booking_id = i.booking_id
 JOIN customers c ON c.customer_id = b.customer_id
@@ -47,7 +47,7 @@ def generate_invoice(booking_id: int) -> dict:
         """
         SELECT b.booking_id,
                ((b.check_out_date - b.check_in_date) * rt.price_per_night) AS room_total,
-               NVL((SELECT SUM(total_price) FROM service_usage su WHERE su.booking_id = b.booking_id), 0) AS service_total
+               COALESCE((SELECT SUM(total_price) FROM service_usage su WHERE su.booking_id = b.booking_id), 0) AS service_total
         FROM bookings b
         JOIN rooms r ON r.room_id = b.room_id
         JOIN room_types rt ON rt.room_type_id = r.room_type_id
@@ -62,8 +62,8 @@ def generate_invoice(booking_id: int) -> dict:
     invoice_id = execute_returning_id(
         """
         INSERT INTO invoices (booking_id, total_amount, tax, generated_date)
-        VALUES (:booking_id, :total_amount, :tax, SYSDATE)
-        RETURNING invoice_id INTO :new_id
+        VALUES (:booking_id, :total_amount, :tax, CURRENT_DATE)
+        RETURNING invoice_id
         """,
         {"booking_id": booking_id, "total_amount": subtotal, "tax": tax},
     )
@@ -94,8 +94,8 @@ def create_payment(payload: PaymentRequest, user: dict = Depends(get_current_use
     payment_id = execute_returning_id(
         """
         INSERT INTO payments (booking_id, method_id, amount, payment_date, status)
-        VALUES (:booking_id, :method_id, :amount, SYSDATE, 'COMPLETED')
-        RETURNING payment_id INTO :new_id
+        VALUES (:booking_id, :method_id, :amount, CURRENT_DATE, 'COMPLETED')
+        RETURNING payment_id
         """,
         payload.model_dump(),
     )
@@ -108,4 +108,3 @@ def create_payment(payload: PaymentRequest, user: dict = Depends(get_current_use
         """,
         {"payment_id": payment_id},
     )
-

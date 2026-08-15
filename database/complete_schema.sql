@@ -1,215 +1,189 @@
 -- =============================================================
--- Hotel Management System — Complete Database Schema
--- Run this ONCE in Oracle SQL Plus on a fresh schema
+-- Hotel Management System - PostgreSQL Schema
+-- Run this on a fresh PostgreSQL database before seed_demo.sql.
 -- =============================================================
 
--- -------------------------------------------------------------
--- 1. USERS
--- -------------------------------------------------------------
-CREATE TABLE USERS (
-    user_id          NUMBER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    email            VARCHAR2(100) UNIQUE NOT NULL,
-    password_hash    VARCHAR2(255) NOT NULL,
-    name             VARCHAR2(100) NOT NULL,
-    phone_country_code VARCHAR2(5),
-    phone_number     VARCHAR2(15),
-    is_active        NUMBER(1) DEFAULT 1 NOT NULL,
-    created_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+BEGIN;
+
+DROP TABLE IF EXISTS room_maintenance CASCADE;
+DROP TABLE IF EXISTS service_usage CASCADE;
+DROP TABLE IF EXISTS services CASCADE;
+DROP TABLE IF EXISTS invoices CASCADE;
+DROP TABLE IF EXISTS payments CASCADE;
+DROP TABLE IF EXISTS payment_methods CASCADE;
+DROP TABLE IF EXISTS bookings CASCADE;
+DROP TABLE IF EXISTS rooms CASCADE;
+DROP TABLE IF EXISTS room_types CASCADE;
+DROP TABLE IF EXISTS staff CASCADE;
+DROP TABLE IF EXISTS managers CASCADE;
+DROP TABLE IF EXISTS departments CASCADE;
+DROP TABLE IF EXISTS customers CASCADE;
+DROP TABLE IF EXISTS user_roles CASCADE;
+DROP TABLE IF EXISTS roles CASCADE;
+DROP TABLE IF EXISTS users CASCADE;
+
+CREATE TABLE users (
+    user_id BIGSERIAL PRIMARY KEY,
+    email VARCHAR(100) UNIQUE,
+    password_hash VARCHAR(255) NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    phone_country_code VARCHAR(5),
+    phone_number VARCHAR(15),
+    is_active BOOLEAN DEFAULT TRUE NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Friend's branch adds this to allow staff/manager accounts without email
-ALTER TABLE USERS MODIFY (email NULL);
-
--- -------------------------------------------------------------
--- 2. ROLES
--- -------------------------------------------------------------
-CREATE TABLE ROLES (
-    role_id   NUMBER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    role_name VARCHAR2(50) NOT NULL UNIQUE
+CREATE TABLE roles (
+    role_id BIGSERIAL PRIMARY KEY,
+    role_name VARCHAR(50) NOT NULL UNIQUE
 );
 
--- -------------------------------------------------------------
--- 3. USER_ROLES
--- -------------------------------------------------------------
-CREATE TABLE USER_ROLES (
-    user_id NUMBER NOT NULL,
-    role_id NUMBER NOT NULL,
-    CONSTRAINT pk_user_roles  PRIMARY KEY (user_id, role_id),
-    CONSTRAINT fk_ur_user     FOREIGN KEY (user_id) REFERENCES USERS(user_id),
-    CONSTRAINT fk_ur_role     FOREIGN KEY (role_id) REFERENCES ROLES(role_id)
+CREATE TABLE user_roles (
+    user_id BIGINT NOT NULL,
+    role_id BIGINT NOT NULL,
+    CONSTRAINT pk_user_roles PRIMARY KEY (user_id, role_id),
+    CONSTRAINT fk_ur_user FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+    CONSTRAINT fk_ur_role FOREIGN KEY (role_id) REFERENCES roles(role_id) ON DELETE CASCADE
 );
 
--- -------------------------------------------------------------
--- 4. CUSTOMERS
--- -------------------------------------------------------------
-CREATE TABLE CUSTOMERS (
-    customer_id    NUMBER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    user_id        NUMBER UNIQUE NOT NULL,
-    address        VARCHAR2(255) DEFAULT '',
-    id_proof       VARCHAR2(100) DEFAULT '',
-    nationality    VARCHAR2(50)  DEFAULT '',
-    loyalty_points NUMBER        DEFAULT 0,
-    CONSTRAINT fk_cust_user FOREIGN KEY (user_id) REFERENCES USERS(user_id)
+CREATE TABLE customers (
+    customer_id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT UNIQUE NOT NULL,
+    address VARCHAR(255) DEFAULT '',
+    id_proof VARCHAR(100) DEFAULT '',
+    nationality VARCHAR(50) DEFAULT '',
+    loyalty_points INTEGER DEFAULT 0,
+    CONSTRAINT fk_cust_user FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
 );
 
--- -------------------------------------------------------------
--- 5. DEPARTMENTS
--- (head_manager_id FK added after MANAGERS table is created)
--- -------------------------------------------------------------
-CREATE TABLE DEPARTMENTS (
-    department_id   NUMBER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    department_name VARCHAR2(100) NOT NULL UNIQUE,
-    head_manager_id NUMBER
+CREATE TABLE departments (
+    department_id BIGSERIAL PRIMARY KEY,
+    department_name VARCHAR(100) NOT NULL UNIQUE,
+    head_manager_id BIGINT
 );
 
--- -------------------------------------------------------------
--- 6. MANAGERS
--- -------------------------------------------------------------
-CREATE TABLE MANAGERS (
-    manager_id            NUMBER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    user_id               NUMBER NOT NULL UNIQUE,
-    department_id         NUMBER NOT NULL,
-    reports_to_manager_id NUMBER,
-    job_description       VARCHAR2(100),
-    salary                NUMBER(10, 2),
-    CONSTRAINT fk_mgr_user FOREIGN KEY (user_id)               REFERENCES USERS(user_id)    ON DELETE CASCADE,
-    CONSTRAINT fk_mgr_dept FOREIGN KEY (department_id)         REFERENCES DEPARTMENTS(department_id),
-    CONSTRAINT fk_mgr_mgr  FOREIGN KEY (reports_to_manager_id) REFERENCES MANAGERS(manager_id)
+CREATE TABLE managers (
+    manager_id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL UNIQUE,
+    department_id BIGINT NOT NULL,
+    reports_to_manager_id BIGINT,
+    job_description VARCHAR(100),
+    salary NUMERIC(10, 2),
+    CONSTRAINT fk_mgr_user FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+    CONSTRAINT fk_mgr_dept FOREIGN KEY (department_id) REFERENCES departments(department_id),
+    CONSTRAINT fk_mgr_mgr FOREIGN KEY (reports_to_manager_id) REFERENCES managers(manager_id)
 );
 
--- Now add the FK from DEPARTMENTS back to MANAGERS
-ALTER TABLE DEPARTMENTS
+ALTER TABLE departments
     ADD CONSTRAINT fk_dept_head
-    FOREIGN KEY (head_manager_id) REFERENCES MANAGERS(manager_id);
+    FOREIGN KEY (head_manager_id) REFERENCES managers(manager_id);
 
--- -------------------------------------------------------------
--- 7. STAFF
--- -------------------------------------------------------------
-CREATE TABLE STAFF (
-    staff_id        NUMBER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    user_id         NUMBER NOT NULL UNIQUE,
-    department_id   NUMBER NOT NULL,
-    manager_id      NUMBER NOT NULL,
-    job_description VARCHAR2(100),
-    salary          NUMBER(10, 2),
-    CONSTRAINT fk_staff_user FOREIGN KEY (user_id)       REFERENCES USERS(user_id)        ON DELETE CASCADE,
-    CONSTRAINT fk_staff_dept FOREIGN KEY (department_id) REFERENCES DEPARTMENTS(department_id),
-    CONSTRAINT fk_staff_mgr  FOREIGN KEY (manager_id)    REFERENCES MANAGERS(manager_id)
+CREATE TABLE staff (
+    staff_id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL UNIQUE,
+    department_id BIGINT NOT NULL,
+    manager_id BIGINT NOT NULL,
+    job_description VARCHAR(100),
+    salary NUMERIC(10, 2),
+    CONSTRAINT fk_staff_user FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+    CONSTRAINT fk_staff_dept FOREIGN KEY (department_id) REFERENCES departments(department_id),
+    CONSTRAINT fk_staff_mgr FOREIGN KEY (manager_id) REFERENCES managers(manager_id)
 );
 
--- -------------------------------------------------------------
--- 8. ROOM_TYPES
--- -------------------------------------------------------------
-CREATE TABLE ROOM_TYPES (
-    room_type_id    NUMBER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    type_name       VARCHAR2(50)  NOT NULL UNIQUE,
-    capacity        NUMBER        DEFAULT 1,
-    price_per_night NUMBER(10, 2) NOT NULL,
-    description     VARCHAR2(255)
+CREATE TABLE room_types (
+    room_type_id BIGSERIAL PRIMARY KEY,
+    type_name VARCHAR(50) NOT NULL UNIQUE,
+    capacity INTEGER DEFAULT 1,
+    price_per_night NUMERIC(10, 2) NOT NULL,
+    description VARCHAR(255)
 );
 
--- -------------------------------------------------------------
--- 9. ROOMS
--- -------------------------------------------------------------
-CREATE TABLE ROOMS (
-    room_id      NUMBER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    room_number  NUMBER        NOT NULL UNIQUE,
-    room_type_id NUMBER        NOT NULL,
-    floor        NUMBER        DEFAULT 1,
-    status       VARCHAR2(20)  DEFAULT 'AVAILABLE'
+CREATE TABLE rooms (
+    room_id BIGSERIAL PRIMARY KEY,
+    room_number INTEGER NOT NULL UNIQUE,
+    room_type_id BIGINT NOT NULL,
+    floor INTEGER DEFAULT 1,
+    status VARCHAR(20) DEFAULT 'AVAILABLE'
         CHECK (status IN ('AVAILABLE', 'OCCUPIED', 'MAINTENANCE', 'RESERVED')),
-    CONSTRAINT fk_room_type FOREIGN KEY (room_type_id) REFERENCES ROOM_TYPES(room_type_id)
+    CONSTRAINT fk_room_type FOREIGN KEY (room_type_id) REFERENCES room_types(room_type_id)
 );
 
--- -------------------------------------------------------------
--- 10. BOOKINGS
--- -------------------------------------------------------------
-CREATE TABLE BOOKINGS (
-    booking_id     NUMBER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    customer_id    NUMBER       NOT NULL,
-    room_id        NUMBER       NOT NULL,
-    booking_date   DATE         DEFAULT SYSDATE,
-    check_in_date  DATE         NOT NULL,
-    check_out_date DATE         NOT NULL,
-    booking_status VARCHAR2(20) DEFAULT 'PENDING'
+CREATE TABLE bookings (
+    booking_id BIGSERIAL PRIMARY KEY,
+    customer_id BIGINT NOT NULL,
+    room_id BIGINT NOT NULL,
+    booking_date DATE DEFAULT CURRENT_DATE,
+    check_in_date DATE NOT NULL,
+    check_out_date DATE NOT NULL,
+    booking_status VARCHAR(20) DEFAULT 'PENDING'
         CHECK (booking_status IN (
             'PENDING', 'APPROVED', 'REJECTED',
             'CHECKIN_PENDING', 'CHECKED_IN',
             'CHECKOUT_PENDING', 'CHECKED_OUT',
             'CANCELLED'
         )),
-    CONSTRAINT fk_book_cust FOREIGN KEY (customer_id) REFERENCES CUSTOMERS(customer_id),
-    CONSTRAINT fk_book_room FOREIGN KEY (room_id)     REFERENCES ROOMS(room_id)
+    CONSTRAINT fk_book_cust FOREIGN KEY (customer_id) REFERENCES customers(customer_id),
+    CONSTRAINT fk_book_room FOREIGN KEY (room_id) REFERENCES rooms(room_id)
 );
 
--- -------------------------------------------------------------
--- 11. PAYMENT_METHODS
--- -------------------------------------------------------------
-CREATE TABLE PAYMENT_METHODS (
-    method_id   NUMBER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    method_name VARCHAR2(50) NOT NULL UNIQUE
+CREATE TABLE payment_methods (
+    method_id BIGSERIAL PRIMARY KEY,
+    method_name VARCHAR(50) NOT NULL UNIQUE
 );
 
--- -------------------------------------------------------------
--- 12. PAYMENTS
--- -------------------------------------------------------------
-CREATE TABLE PAYMENTS (
-    payment_id   NUMBER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    booking_id   NUMBER        NOT NULL,
-    method_id    NUMBER        NOT NULL,
-    amount       NUMBER(10, 2) NOT NULL,
-    payment_date DATE          DEFAULT SYSDATE,
-    status       VARCHAR2(20)  DEFAULT 'COMPLETED'
+CREATE TABLE payments (
+    payment_id BIGSERIAL PRIMARY KEY,
+    booking_id BIGINT NOT NULL,
+    method_id BIGINT NOT NULL,
+    amount NUMERIC(10, 2) NOT NULL,
+    payment_date DATE DEFAULT CURRENT_DATE,
+    status VARCHAR(20) DEFAULT 'COMPLETED'
         CHECK (status IN ('COMPLETED', 'PENDING', 'FAILED', 'REFUNDED')),
-    CONSTRAINT fk_pay_booking FOREIGN KEY (booking_id) REFERENCES BOOKINGS(booking_id),
-    CONSTRAINT fk_pay_method  FOREIGN KEY (method_id)  REFERENCES PAYMENT_METHODS(method_id)
+    CONSTRAINT fk_pay_booking FOREIGN KEY (booking_id) REFERENCES bookings(booking_id),
+    CONSTRAINT fk_pay_method FOREIGN KEY (method_id) REFERENCES payment_methods(method_id)
 );
 
--- -------------------------------------------------------------
--- 13. INVOICES
--- -------------------------------------------------------------
-CREATE TABLE INVOICES (
-    invoice_id     NUMBER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    booking_id     NUMBER        NOT NULL UNIQUE,
-    total_amount   NUMBER(10, 2) NOT NULL,
-    tax            NUMBER(10, 2) DEFAULT 0,
-    generated_date DATE          DEFAULT SYSDATE,
-    CONSTRAINT fk_inv_booking FOREIGN KEY (booking_id) REFERENCES BOOKINGS(booking_id)
+CREATE TABLE invoices (
+    invoice_id BIGSERIAL PRIMARY KEY,
+    booking_id BIGINT NOT NULL UNIQUE,
+    total_amount NUMERIC(10, 2) NOT NULL,
+    tax NUMERIC(10, 2) DEFAULT 0,
+    generated_date DATE DEFAULT CURRENT_DATE,
+    CONSTRAINT fk_inv_booking FOREIGN KEY (booking_id) REFERENCES bookings(booking_id)
 );
 
--- -------------------------------------------------------------
--- 14. SERVICES
--- -------------------------------------------------------------
-CREATE TABLE SERVICES (
-    service_id   NUMBER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    service_name VARCHAR2(100) NOT NULL,
-    price        NUMBER(10, 2) NOT NULL
+CREATE TABLE services (
+    service_id BIGSERIAL PRIMARY KEY,
+    service_name VARCHAR(100) NOT NULL,
+    price NUMERIC(10, 2) NOT NULL
 );
 
--- -------------------------------------------------------------
--- 15. SERVICE_USAGE
--- -------------------------------------------------------------
-CREATE TABLE SERVICE_USAGE (
-    usage_id    NUMBER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    booking_id  NUMBER        NOT NULL,
-    service_id  NUMBER        NOT NULL,
-    quantity    NUMBER        DEFAULT 1,
-    total_price NUMBER(10, 2) NOT NULL,
-    CONSTRAINT fk_su_booking FOREIGN KEY (booking_id) REFERENCES BOOKINGS(booking_id),
-    CONSTRAINT fk_su_service FOREIGN KEY (service_id) REFERENCES SERVICES(service_id)
+CREATE TABLE service_usage (
+    usage_id BIGSERIAL PRIMARY KEY,
+    booking_id BIGINT NOT NULL,
+    service_id BIGINT NOT NULL,
+    quantity INTEGER DEFAULT 1,
+    total_price NUMERIC(10, 2) NOT NULL,
+    CONSTRAINT fk_su_booking FOREIGN KEY (booking_id) REFERENCES bookings(booking_id),
+    CONSTRAINT fk_su_service FOREIGN KEY (service_id) REFERENCES services(service_id)
 );
 
--- -------------------------------------------------------------
--- 16. ROOM_MAINTENANCE
--- -------------------------------------------------------------
-CREATE TABLE ROOM_MAINTENANCE (
-    maintenance_id   NUMBER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    room_id          NUMBER       NOT NULL,
-    staff_id         NUMBER,
-    description      VARCHAR2(255),
-    maintenance_date DATE         DEFAULT SYSDATE,
-    status           VARCHAR2(20) DEFAULT 'PENDING'
+CREATE TABLE room_maintenance (
+    maintenance_id BIGSERIAL PRIMARY KEY,
+    room_id BIGINT NOT NULL,
+    staff_id BIGINT,
+    description VARCHAR(255),
+    maintenance_date DATE DEFAULT CURRENT_DATE,
+    status VARCHAR(20) DEFAULT 'PENDING'
         CHECK (status IN ('PENDING', 'IN_PROGRESS', 'COMPLETED')),
-    CONSTRAINT fk_maint_room  FOREIGN KEY (room_id)   REFERENCES ROOMS(room_id),
-    CONSTRAINT fk_maint_staff FOREIGN KEY (staff_id)  REFERENCES STAFF(staff_id)
+    CONSTRAINT fk_maint_room FOREIGN KEY (room_id) REFERENCES rooms(room_id),
+    CONSTRAINT fk_maint_staff FOREIGN KEY (staff_id) REFERENCES staff(staff_id)
 );
+
+CREATE INDEX idx_bookings_customer_id ON bookings(customer_id);
+CREATE INDEX idx_bookings_room_id ON bookings(room_id);
+CREATE INDEX idx_bookings_status ON bookings(booking_status);
+CREATE INDEX idx_payments_booking_id ON payments(booking_id);
+CREATE INDEX idx_service_usage_booking_id ON service_usage(booking_id);
+
+COMMIT;

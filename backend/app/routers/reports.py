@@ -44,7 +44,7 @@ def report_summary() -> dict:
     )
     services = fetch_all(
         """
-        SELECT s.service_name AS label, NVL(SUM(su.quantity), 0) AS value
+        SELECT s.service_name AS label, COALESCE(SUM(su.quantity), 0) AS value
         FROM services s
         LEFT JOIN service_usage su ON su.service_id = s.service_id
         GROUP BY s.service_name
@@ -58,4 +58,3 @@ def report_summary() -> dict:
         "room_types": room_types,
         "services": services,
     }
-
