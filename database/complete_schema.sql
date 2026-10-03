@@ -3,7 +3,10 @@
 -- Run this on a fresh PostgreSQL database before seed_demo.sql.
 -- =============================================================
 
+
 BEGIN;
+
+CREATE EXTENSION IF NOT EXISTS btree_gist;
 
 DROP TABLE IF EXISTS room_maintenance CASCADE;
 DROP TABLE IF EXISTS service_usage CASCADE;
@@ -30,7 +33,8 @@ CREATE TABLE users (
     phone_country_code VARCHAR(5),
     phone_number VARCHAR(15),
     is_active BOOLEAN DEFAULT TRUE NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    must_change_password BOOLEAN NOT NULL DEFAULT FALSE
 );
 
 CREATE TABLE roles (
@@ -115,15 +119,56 @@ CREATE TABLE bookings (
     booking_date DATE DEFAULT CURRENT_DATE,
     check_in_date DATE NOT NULL,
     check_out_date DATE NOT NULL,
+
     booking_status VARCHAR(20) DEFAULT 'PENDING'
-        CHECK (booking_status IN (
-            'PENDING', 'APPROVED', 'REJECTED',
-            'CHECKIN_PENDING', 'CHECKED_IN',
-            'CHECKOUT_PENDING', 'CHECKED_OUT',
-            'CANCELLED'
-        )),
-    CONSTRAINT fk_book_cust FOREIGN KEY (customer_id) REFERENCES customers(customer_id),
-    CONSTRAINT fk_book_room FOREIGN KEY (room_id) REFERENCES rooms(room_id)
+        CHECK (
+            booking_status IN (
+                'PENDING',
+                'APPROVED',
+                'REJECTED',
+                'CHECKIN_PENDING',
+                'CHECKED_IN',
+                'CHECKOUT_PENDING',
+                'CHECKED_OUT',
+                'CANCELLED'
+            )
+        ),
+
+    approved_by BIGINT,
+    rejection_reason VARCHAR(255),
+
+    CONSTRAINT fk_book_cust
+        FOREIGN KEY (customer_id)
+        REFERENCES customers(customer_id),
+
+    CONSTRAINT fk_book_room
+        FOREIGN KEY (room_id)
+        REFERENCES rooms(room_id),
+
+    CONSTRAINT fk_booking_approved_by
+        FOREIGN KEY (approved_by)
+        REFERENCES users(user_id),
+
+    CHECK (check_out_date > check_in_date)
+);
+
+ALTER TABLE bookings
+ADD CONSTRAINT bookings_no_overlap
+EXCLUDE USING gist (
+    room_id WITH =,
+    daterange(
+        check_in_date,
+        check_out_date,
+        '[)'
+    ) WITH &&
+)
+WHERE (
+    booking_status IN (
+        'APPROVED',
+        'CHECKIN_PENDING',
+        'CHECKED_IN',
+        'CHECKOUT_PENDING'
+    )
 );
 
 CREATE TABLE payment_methods (
@@ -140,7 +185,8 @@ CREATE TABLE payments (
     status VARCHAR(20) DEFAULT 'COMPLETED'
         CHECK (status IN ('COMPLETED', 'PENDING', 'FAILED', 'REFUNDED')),
     CONSTRAINT fk_pay_booking FOREIGN KEY (booking_id) REFERENCES bookings(booking_id),
-    CONSTRAINT fk_pay_method FOREIGN KEY (method_id) REFERENCES payment_methods(method_id)
+    CONSTRAINT fk_pay_method FOREIGN KEY (method_id) REFERENCES payment_methods(method_id),
+    CHECK (amount > 0)
 );
 
 CREATE TABLE invoices (
@@ -165,7 +211,8 @@ CREATE TABLE service_usage (
     quantity INTEGER DEFAULT 1,
     total_price NUMERIC(10, 2) NOT NULL,
     CONSTRAINT fk_su_booking FOREIGN KEY (booking_id) REFERENCES bookings(booking_id),
-    CONSTRAINT fk_su_service FOREIGN KEY (service_id) REFERENCES services(service_id)
+    CONSTRAINT fk_su_service FOREIGN KEY (service_id) REFERENCES services(service_id),
+    CHECK (quantity > 0)
 );
 
 CREATE TABLE room_maintenance (
@@ -180,10 +227,20 @@ CREATE TABLE room_maintenance (
     CONSTRAINT fk_maint_staff FOREIGN KEY (staff_id) REFERENCES staff(staff_id)
 );
 
-CREATE INDEX idx_bookings_customer_id ON bookings(customer_id);
-CREATE INDEX idx_bookings_room_id ON bookings(room_id);
-CREATE INDEX idx_bookings_status ON bookings(booking_status);
+CREATE INDEX idx_bookings_customer_id
+ON bookings(customer_id);
+
+CREATE INDEX idx_bookings_room_id
+ON bookings(room_id);
+
+CREATE INDEX idx_bookings_room_checkin
+ON bookings(room_id, check_in_date);
+
+CREATE INDEX idx_bookings_status
+ON bookings(booking_status);
 CREATE INDEX idx_payments_booking_id ON payments(booking_id);
 CREATE INDEX idx_service_usage_booking_id ON service_usage(booking_id);
+CREATE UNIQUE INDEX idx_users_email_lower
+ON users(LOWER(email));
 
 COMMIT;

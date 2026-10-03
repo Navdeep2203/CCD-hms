@@ -1,10 +1,15 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+import logging
 
 from app.core.config import settings
 from app.database import close_pool, init_pool
 from app.routers import admin, auth, billing, bookings, dashboard, reports, rooms, services
 
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(name)s %(message)s",
+)
 
 app = FastAPI(
     title="Hotel Management API",
