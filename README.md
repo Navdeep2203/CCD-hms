@@ -1,3 +1,19 @@
+# Backend setup (updated)
+
+1. `cd backend`, create a venv, `pip install -r requirements-dev.txt`.
+2. Copy `.env.example` to `.env`. Set the DB values and a real `JWT_SECRET`
+   (`python -c "import secrets; print(secrets.token_urlsafe(48))"`). The app refuses to start otherwise.
+3. Create the database, then `python -m app.migrate --seed` (migrations live in `database/migrations/`;
+   an existing database that already has the old schema + improvements is detected and baselined).
+4. `uvicorn app.main:app --reload` -> API docs at http://127.0.0.1:8000/docs, readiness at `/api/health/ready`.
+5. Tests: `createdb hotel_test` once, then `pytest` (WARNING: wipes and rebuilds `hotel_test` each module).
+
+**API changes the frontend must follow:** `/api/admin/*` is gone. Use `/api/staff`, `/api/managers`, `/api/customers`,
+`/api/departments`, `/api/maintenance`. `GET /dashboard/overview` returns a `kind` (`guest`/`staff`/`management`).
+Login returns `user.must_change_password`. See `docs/FRONTEND_TODO.md`.
+
+---
+
 # Hotel Management System - React + FastAPI
 
 Full-stack conversion of the original JavaFX hotel management system into a resume-ready web application.
@@ -34,7 +50,7 @@ hotel-management-fullstack/
 
 1. Install PostgreSQL and make sure the PostgreSQL service is running.
 2. Create a database named `hotel_management`.
-3. Run `database/complete_schema.sql`.
+3. Run `python -m app.migrate --seed` from `backend/` (see 'Backend setup' above).
 4. Run `database/seed_demo.sql`.
 5. Copy `backend/.env.example` to `backend/.env`.
 6. Update the PostgreSQL username and password:
@@ -52,7 +68,7 @@ Command-line example:
 
 ```bat
 createdb -U postgres hotel_management
-psql -U postgres -d hotel_management -f database\complete_schema.sql
+cd backend && python -m app.migrate --seed
 psql -U postgres -d hotel_management -f database\seed_demo.sql
 ```
 
@@ -82,7 +98,7 @@ http://127.0.0.1:5173
 
 ## Demo Accounts
 
-The seed script creates these accounts. The demo password is `admin123`.
+The seed script creates these accounts. Demo logins (DEMO ONLY): admin@hotel.com / Admin@2026, manager@hotel.com / Manager@2026, staff@hotel.com / Staff@2026, customer@hotel.com / Guest@2026.
 
 | Role | Email |
 | --- | --- |

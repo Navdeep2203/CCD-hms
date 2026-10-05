@@ -1,98 +1,107 @@
 from __future__ import annotations
 
+import logging
 import re
 from contextlib import contextmanager
 from datetime import date, datetime
 from decimal import Decimal
-from typing import Any
-import logging
-from psycopg.errors import (
-    UniqueViolation,
-    ExclusionViolation,
-    ForeignKeyViolation,
-    CheckViolation,
-    NotNullViolation,
-    DataError
-)
+from typing import Any, NoReturn
 
 import psycopg
 from fastapi import HTTPException, status
+from psycopg.conninfo import make_conninfo
+from psycopg.errors import (
+    CheckViolation,
+    DataError,
+    ExclusionViolation,
+    ForeignKeyViolation,
+    NotNullViolation,
+    UniqueViolation,
+)
 from psycopg.rows import dict_row
+from psycopg_pool import ConnectionPool
 
 from app.core.config import settings
 
-
-_BIND_PATTERN = re.compile(r"(?<!:):([A-Za-z_][A-Za-z0-9_]*)")
-_RETURNING_INTO_PATTERN = re.compile(
-    r"RETURNING\s+([A-Za-z_][A-Za-z0-9_.]*)\s+INTO\s+:new_id",
-    re.IGNORECASE,
-)
-
 logger = logging.getLogger(__name__)
 
+# SQL in this project uses ":name" bind parameters; they are translated to psycopg's %(name)s.
+_BIND_PATTERN = re.compile(r"(?<!:):([A-Za-z_][A-Za-z0-9_]*)")
 
-def _connect_kwargs() -> dict[str, Any]:
+_pool: ConnectionPool | None = None
+
+
+def _conninfo() -> str:
     if settings.database_url:
-        return {"conninfo": settings.database_url}
-    if not settings.database_user or not settings.database_password or not settings.database_name:
-        raise RuntimeError("PostgreSQL DATABASE_USER, DATABASE_PASSWORD and DATABASE_NAME must be configured")
-    return {
-        "host": settings.database_host,
-        "port": settings.database_port,
-        "dbname": settings.database_name,
-        "user": settings.database_user,
-        "password": settings.database_password,
-    }
+        return settings.database_url
+    return make_conninfo(
+        host=settings.database_host,
+        port=settings.database_port,
+        dbname=settings.database_name,
+        user=settings.database_user,
+        password=settings.database_password,
+    )
 
 
 def init_pool() -> None:
-    # Kept for FastAPI lifecycle compatibility. Connections are opened per request operation.
-    return None
+    global _pool
+    if _pool is None:
+        _pool = ConnectionPool(
+            _conninfo(),
+            min_size=settings.db_pool_min,
+            max_size=settings.db_pool_max,
+            kwargs={"row_factory": dict_row},
+            open=True,
+        )
+        _pool.wait(timeout=15)
 
 
 def close_pool() -> None:
-    return None
+    global _pool
+    if _pool is not None:
+        _pool.close()
+        _pool = None
+
+
+def ping() -> bool:
+    try:
+        with connection() as conn, conn.cursor() as cursor:
+            cursor.execute("SELECT 1")
+            return True
+    except Exception:
+        logger.exception("Database ping failed")
+        return False
 
 
 @contextmanager
 def connection():
-    conn = psycopg.connect(**_connect_kwargs(), row_factory=dict_row)
-    try:
-        yield conn
-    finally:
-        conn.close()
+    if _pool is not None:
+        with _pool.connection() as conn:
+            yield conn
+    else:
+        conn = psycopg.connect(_conninfo(), row_factory=dict_row)
+        try:
+            yield conn
+        finally:
+            conn.close()
+
 
 @contextmanager
 def transaction():
-    conn = psycopg.connect(
-        **_connect_kwargs(),
-        row_factory=dict_row,
-    )
+    """One connection, committed at the end or rolled back on any error.
 
+    Pass ``conn=conn`` to every helper call made inside the block.
+    """
     try:
-        yield conn
-
-        try:
+        with connection() as conn:
+            yield conn
             conn.commit()
+    except psycopg.Error as exc:
+        handle_database_error(exc)
 
-        except psycopg.Error as exc:
-            conn.rollback()
-            handle_database_error(exc)
-
-    except Exception:
-        conn.rollback()
-        raise
-
-    finally:
-        conn.close()
 
 def _translate_sql(sql: str) -> str:
     return _BIND_PATTERN.sub(r"%(\1)s", sql)
-
-
-def _translate_returning_sql(sql: str) -> str:
-    sql = _RETURNING_INTO_PATTERN.sub(r"RETURNING \1", sql)
-    return _translate_sql(sql)
 
 
 def _convert(value: Any) -> Any:
@@ -106,213 +115,63 @@ def _convert(value: Any) -> Any:
 def _normalize_row(row: dict[str, Any]) -> dict[str, Any]:
     return {key.lower(): _convert(value) for key, value in row.items()}
 
+
 def handle_database_error(exc: Exception) -> NoReturn:
     if isinstance(exc, UniqueViolation):
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="That record already exists",
-        )
-
+        raise HTTPException(status.HTTP_409_CONFLICT, "That record already exists")
     if isinstance(exc, ExclusionViolation):
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="That room is already booked for those dates",
-        )
-
+        raise HTTPException(status.HTTP_409_CONFLICT, "That room is already booked for those dates")
     if isinstance(exc, ForeignKeyViolation):
-        message = ""
-
-        if getattr(exc, "diag", None):
-            message = (
-                getattr(exc.diag, "message_primary", "")
-                or ""
-            ).lower()
-
-        if "not present" in message:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Referenced record does not exist",
-            )
-
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="This record is referenced by other data",
-        )
-
+        message = (getattr(getattr(exc, "diag", None), "message_primary", "") or "").lower()
+        if "still referenced" in message:
+            raise HTTPException(status.HTTP_409_CONFLICT, "This record is used by other data and cannot be removed")
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "A referenced record does not exist")
     if isinstance(exc, CheckViolation):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid value",
-        )
-
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Invalid value")
     if isinstance(exc, NotNullViolation):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="A required field is missing",
-        )
-
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "A required field is missing")
     if isinstance(exc, DataError):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid input",
-        )
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Invalid input")
+    logger.error("Database error", exc_info=exc)
+    raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, "Something went wrong")
 
-    logger.exception("Database error")
 
-    raise HTTPException(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        detail="Something went wrong",
-    )
-def fetch_all(
-    sql: str,
-    params: dict[str, Any] | None = None,
-    conn=None,
-) -> list[dict[str, Any]]:
+def _run(sql: str, params: dict[str, Any] | None, conn, *, rows: bool):
+    def work(active):
+        with active.cursor() as cursor:
+            cursor.execute(_translate_sql(sql), params or {})
+            if rows:
+                return [_normalize_row(row) for row in cursor.fetchall()]
+            return cursor.rowcount
 
     try:
         if conn is not None:
-            with conn.cursor() as cursor:
-                cursor.execute(_translate_sql(sql), params or {})
-                return [
-                    _normalize_row(row)
-                    for row in cursor.fetchall()
-                ]
-
-        with connection() as conn:
-            with conn.cursor() as cursor:
-                cursor.execute(_translate_sql(sql), params or {})
-                return [
-                    _normalize_row(row)
-                    for row in cursor.fetchall()
-                ]
-
+            return work(conn)
+        with connection() as active:
+            result = work(active)
+            active.commit()
+            return result
     except psycopg.Error as exc:
         handle_database_error(exc)
 
 
-def fetch_one(
-    sql: str,
-    params: dict[str, Any] | None = None,
-    conn=None,
-) -> dict[str, Any] | None:
-
-    rows = fetch_all(
-        sql,
-        params,
-        conn=conn,
-    )
-
-    return rows[0] if rows else None
+def fetch_all(sql: str, params: dict[str, Any] | None = None, conn=None) -> list[dict[str, Any]]:
+    return _run(sql, params, conn, rows=True)
 
 
-def execute(
-    sql: str,
-    params: dict[str, Any] | None = None,
-    conn=None,
-) -> int:
-
-    try:
-        if conn is not None:
-            with conn.cursor() as cursor:
-                cursor.execute(
-                    _translate_sql(sql),
-                    params or {},
-                )
-
-                return cursor.rowcount
-
-        with connection() as conn:
-            with conn.cursor() as cursor:
-                cursor.execute(
-                    _translate_sql(sql),
-                    params or {},
-                )
-
-                affected = cursor.rowcount
-
-            conn.commit()
-
-            return affected
-
-    except psycopg.Error as exc:
-        handle_database_error(exc)
-
-def _execute_query(
-    conn,
-    sql: str,
-    params: dict[str, Any] | None = None,
-):
-    with conn.cursor() as cursor:
-        cursor.execute(
-            _translate_sql(sql),
-            params or {},
-        )
-        return cursor
+def fetch_one(sql: str, params: dict[str, Any] | None = None, conn=None) -> dict[str, Any] | None:
+    result = fetch_all(sql, params, conn=conn)
+    return result[0] if result else None
 
 
-def execute_returning_id(
-    sql: str,
-    params: dict[str, Any],
-    out_name: str = "new_id",
-    conn=None,
-) -> int:
+def execute(sql: str, params: dict[str, Any] | None = None, conn=None) -> int:
+    return _run(sql, params, conn, rows=False)
 
-    params = {
-        key: value
-        for key, value in params.items()
-        if key != out_name
-    }
 
-    try:
-        if conn is not None:
-            with conn.cursor() as cursor:
-                cursor.execute(
-                    _translate_returning_sql(sql),
-                    params,
-                )
-
-                value = cursor.fetchone()
-
-                if value is None:
-                    raise RuntimeError(
-                        "INSERT did not return an id"
-                    )
-
-                return int(
-                    next(iter(value.values()))
-                )
-
-        with connection() as conn:
-            with conn.cursor() as cursor:
-                cursor.execute(
-                    _translate_returning_sql(sql),
-                    params,
-                )
-
-                value = cursor.fetchone()
-
-                if value is None:
-                    raise RuntimeError(
-                        "INSERT did not return an id"
-                    )
-
-                new_id = int(
-                    next(iter(value.values()))
-                )
-
-            conn.commit()
-
-            return new_id
-
-    except psycopg.Error as exc:
-        handle_database_error(exc)
-
-    except RuntimeError:
-        logger.exception(
-            "Failed to obtain returned id"
-        )
-
-        raise HTTPException(
-            status_code=500,
-            detail="Something went wrong",
-        )
+def execute_returning_id(sql: str, params: dict[str, Any], conn=None) -> int:
+    """Run an INSERT ... RETURNING <id> and return that single value."""
+    result = _run(sql, params, conn, rows=True)
+    if not result:
+        logger.error("INSERT did not return an id")
+        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, "Something went wrong")
+    return int(next(iter(result[0].values())))

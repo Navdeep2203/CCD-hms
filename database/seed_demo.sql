@@ -1,7 +1,8 @@
 -- =============================================================
 -- Hotel Management System - PostgreSQL demo seed data
 -- Run after complete_schema.sql.
--- Demo password for all seeded accounts: admin123
+-- Demo logins (DEMO ONLY, never use in production):
+--   admin@hotel.com Admin@2026 | manager@hotel.com Manager@2026 | staff@hotel.com Staff@2026 | customer@hotel.com Guest@2026
 -- =============================================================
 
 BEGIN;
@@ -12,16 +13,16 @@ INSERT INTO roles (role_name) VALUES ('ROLE_STAFF');
 INSERT INTO roles (role_name) VALUES ('ROLE_CUSTOMER');
 
 INSERT INTO users (email, password_hash, name, phone_country_code, phone_number)
-VALUES ('admin@hotel.com', '$2a$12$SE.HqXOe6gpFtIbf5v9gRerX8wO1mgc3h4fguk8y87FKSrURRQ9iC', 'System Admin', '+91', '9000000001');
+VALUES ('admin@hotel.com', '$2b$12$mXxwVpbM7NnLDzwUF7BqpOpp8/YSIh/v2b4wvJ.JolzdgfF7ceS9.', 'System Admin', '+91', '9000000001');
 
 INSERT INTO users (email, password_hash, name, phone_country_code, phone_number)
-VALUES ('manager@hotel.com', '$2a$12$SE.HqXOe6gpFtIbf5v9gRerX8wO1mgc3h4fguk8y87FKSrURRQ9iC', 'Aarav Mehta', '+91', '9000000002');
+VALUES ('manager@hotel.com', '$2b$12$kMMfrhA52895MF1s24r5oO3fjz1N4VmnPrCqDqu9YB6aWgvvldVYO', 'Aarav Mehta', '+91', '9000000002');
 
 INSERT INTO users (email, password_hash, name, phone_country_code, phone_number)
-VALUES ('staff@hotel.com', '$2a$12$SE.HqXOe6gpFtIbf5v9gRerX8wO1mgc3h4fguk8y87FKSrURRQ9iC', 'Neha Rao', '+91', '9000000003');
+VALUES ('staff@hotel.com', '$2b$12$HQMStuTSd6OZf3BcLKVo9.0czIhhCJCn3K5.DxFpX5PH9fWb2ILpe', 'Neha Rao', '+91', '9000000003');
 
 INSERT INTO users (email, password_hash, name, phone_country_code, phone_number)
-VALUES ('customer@hotel.com', '$2a$12$SE.HqXOe6gpFtIbf5v9gRerX8wO1mgc3h4fguk8y87FKSrURRQ9iC', 'Riya Kapoor', '+91', '9000000004');
+VALUES ('customer@hotel.com', '$2b$12$eDeIK6BjpXq8q6vgjtusfeQP2J61u6zFbLiE9j7mloO8Z9R8cOnpW', 'Riya Kapoor', '+91', '9000000004');
 
 INSERT INTO user_roles (user_id, role_id)
 SELECT u.user_id, r.role_id FROM users u, roles r
@@ -78,7 +79,7 @@ VALUES ('Suite', 4, 9800, 'Premium suite with lounge space');
 INSERT INTO rooms (room_number, room_type_id, floor, status)
 SELECT 101, room_type_id, 1, 'AVAILABLE' FROM room_types WHERE type_name = 'Standard';
 INSERT INTO rooms (room_number, room_type_id, floor, status)
-SELECT 102, room_type_id, 1, 'RESERVED' FROM room_types WHERE type_name = 'Deluxe';
+SELECT 102, room_type_id, 1, 'AVAILABLE' FROM room_types WHERE type_name = 'Deluxe';
 INSERT INTO rooms (room_number, room_type_id, floor, status)
 SELECT 201, room_type_id, 2, 'OCCUPIED' FROM room_types WHERE type_name = 'Suite';
 INSERT INTO rooms (room_number, room_type_id, floor, status)
@@ -112,7 +113,7 @@ FROM bookings b, services s
 WHERE b.booking_status = 'CHECKED_IN' AND s.service_name = 'Room Dining';
 
 INSERT INTO invoices (booking_id, total_amount, tax, generated_date)
-SELECT b.booking_id, 19600, 2352, CURRENT_DATE
+SELECT b.booking_id, 31100, 3732, CURRENT_DATE
 FROM bookings b
 WHERE b.booking_status = 'CHECKED_IN';
 
