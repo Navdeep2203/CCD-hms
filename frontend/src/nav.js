@@ -1,0 +1,91 @@
+export const HOTEL_NAME = "Meridian House";
+
+export const ALL_ROLES = [
+  "ROLE_ADMIN",
+  "ROLE_MANAGER",
+  "ROLE_STAFF",
+  "ROLE_CUSTOMER",
+];
+
+export const navItems = [
+  {
+    id: "overview",
+    path: "/",
+    label: "Overview",
+    roles: ALL_ROLES,
+    detail: "Live property pulse",
+    code: "OV",
+  },
+  {
+    id: "rooms",
+    path: "/rooms",
+    label: "Rooms",
+    roles: ALL_ROLES,
+    detail: "Inventory grid",
+    code: "RM",
+  },
+  {
+    id: "bookings",
+    path: "/bookings",
+    label: "Bookings",
+    roles: ALL_ROLES,
+    detail: "Arrivals to checkout",
+    code: "BK",
+  },
+  {
+    id: "billing",
+    path: "/billing",
+    label: "Billing",
+    roles: ALL_ROLES,
+    detail: "Invoices and payments",
+    code: "BL",
+  },
+  {
+    id: "services",
+    path: "/services",
+    label: "Services",
+    roles: ALL_ROLES,
+    detail: "Guest add-ons",
+    code: "SV",
+  },
+  {
+    id: "maintenance",
+    path: "/maintenance",
+    label: "Maintenance",
+    roles: ["ROLE_ADMIN", "ROLE_MANAGER", "ROLE_STAFF"],
+    detail: "Room upkeep",
+    code: "MT",
+  },
+  {
+    id: "staff",
+    path: "/staff",
+    label: "Staff",
+    roles: ["ROLE_ADMIN", "ROLE_MANAGER"],
+    detail: "Teams and upkeep",
+    code: "ST",
+  },
+  {
+    id: "customers",
+    path: "/customers",
+    label: "Customers",
+    roles: ["ROLE_ADMIN", "ROLE_MANAGER", "ROLE_STAFF"],
+    detail: "Guest directory",
+    code: "CU",
+  },
+  {
+    id: "reports",
+    path: "/reports",
+    label: "Reports",
+    roles: ["ROLE_ADMIN", "ROLE_MANAGER"],
+    detail: "Commercial insight",
+    code: "RP",
+  },
+  {
+    id: "profile",
+    path: "/profile",
+    label: "Profile",
+    roles: ALL_ROLES,
+    detail: "Access profile",
+    code: "PF",
+  },
+];

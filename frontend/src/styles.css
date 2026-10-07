@@ -1,6 +1,13 @@
 :root {
   color-scheme: light;
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family:
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
   --ink: #162033;
   --ink-soft: #344054;
   --muted: #6b7280;
@@ -25,19 +32,33 @@
   background: var(--paper);
 }
 
-* { box-sizing: border-box; }
+* {
+  box-sizing: border-box;
+}
 
 body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
   background:
-    linear-gradient(90deg, rgba(0, 107, 91, 0.05), rgba(216, 92, 74, 0.04) 42%, rgba(43, 104, 184, 0.04)),
+    linear-gradient(
+      90deg,
+      rgba(0, 107, 91, 0.05),
+      rgba(216, 92, 74, 0.04) 42%,
+      rgba(43, 104, 184, 0.04)
+    ),
     var(--paper);
 }
 
-button, input, select { font: inherit; }
-button { border: 0; cursor: pointer; }
+button,
+input,
+select {
+  font: inherit;
+}
+button {
+  border: 0;
+  cursor: pointer;
+}
 
 .eyebrow {
   margin: 0;
@@ -84,7 +105,8 @@ button { border: 0; cursor: pointer; }
   color: white;
   background:
     linear-gradient(120deg, rgba(0, 54, 49, 0.92), rgba(0, 107, 91, 0.54)),
-    url("https://images.unsplash.com/photo-1564501049412-61c2a3083791?auto=format&fit=crop&w=1800&q=88") center / cover;
+    url("https://images.unsplash.com/photo-1564501049412-61c2a3083791?auto=format&fit=crop&w=1800&q=88")
+      center / cover;
 }
 
 .authVisual::after {
@@ -118,7 +140,9 @@ button { border: 0; cursor: pointer; }
   font-weight: 950;
 }
 
-.authVisual .eyebrow { color: #b7f5df; }
+.authVisual .eyebrow {
+  color: #b7f5df;
+}
 
 .authVisual h1 {
   max-width: 780px;
@@ -155,15 +179,16 @@ button { border: 0; cursor: pointer; }
   backdrop-filter: blur(10px);
 }
 
-.authMetrics strong { color: white; }
+.authMetrics strong {
+  color: white;
+}
 
 .authPanel {
   display: flex;
   flex-direction: column;
   justify-content: center;
   padding: 54px;
-  background:
-    linear-gradient(180deg, #ffffff 0%, #fbfbf8 100%);
+  background: linear-gradient(180deg, #ffffff 0%, #fbfbf8 100%);
 }
 
 .authCardHead {
@@ -193,7 +218,8 @@ button { border: 0; cursor: pointer; }
   letter-spacing: 0;
 }
 
-.form, .formPanel {
+.form,
+.formPanel {
   display: grid;
   gap: 15px;
 }
@@ -206,7 +232,8 @@ label {
   font-weight: 850;
 }
 
-input, select {
+input,
+select {
   width: 100%;
   height: 44px;
   border: 1px solid var(--line-strong);
@@ -215,10 +242,13 @@ input, select {
   background: white;
   color: var(--ink);
   outline: none;
-  transition: border-color 0.16s ease, box-shadow 0.16s ease;
+  transition:
+    border-color 0.16s ease,
+    box-shadow 0.16s ease;
 }
 
-input:focus, select:focus {
+input:focus,
+select:focus {
   border-color: var(--green);
   box-shadow: 0 0 0 4px rgba(0, 107, 91, 0.12);
 }
@@ -238,8 +268,13 @@ input:focus, select:focus {
   box-shadow: 0 12px 22px rgba(0, 107, 91, 0.2);
 }
 
-.primary:hover { background: var(--green-dark); }
-.primary:disabled { cursor: wait; opacity: 0.72; }
+.primary:hover {
+  background: var(--green-dark);
+}
+.primary:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
 
 .linkButton {
   margin-top: 16px;
@@ -301,7 +336,7 @@ nav {
   gap: 8px;
 }
 
-nav button {
+nav a {
   display: grid;
   grid-template-columns: 40px minmax(0, 1fr);
   gap: 10px;
@@ -313,10 +348,13 @@ nav button {
   background: transparent;
   color: var(--ink-soft);
   text-align: left;
-  transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease;
+  transition:
+    background 0.16s ease,
+    border-color 0.16s ease,
+    color 0.16s ease;
 }
 
-nav button b {
+nav a b {
   display: grid;
   place-items: center;
   width: 38px;
@@ -328,7 +366,7 @@ nav button b {
   font-weight: 950;
 }
 
-nav button span {
+nav a span {
   display: grid;
   gap: 2px;
   min-width: 0;
@@ -336,7 +374,7 @@ nav button span {
   font-weight: 950;
 }
 
-nav button small {
+nav a small {
   overflow: hidden;
   color: var(--muted);
   font-size: 11px;
@@ -345,17 +383,17 @@ nav button small {
   white-space: nowrap;
 }
 
-nav button:hover {
+nav a:hover {
   background: #f4f7f4;
 }
 
-nav button.active {
+nav a.active {
   border-color: rgba(0, 107, 91, 0.2);
   background: var(--green-soft);
   color: var(--green-dark);
 }
 
-nav button.active b {
+nav a.active b {
   background: var(--green);
   color: white;
 }
@@ -372,7 +410,8 @@ nav button.active b {
     white;
 }
 
-.sidePanel span, .sidePanel small {
+.sidePanel span,
+.sidePanel small {
   color: var(--muted);
   font-size: 12px;
   font-weight: 850;
@@ -455,7 +494,10 @@ header h1 {
 
 .opsBanner {
   display: grid;
-  grid-template-columns: minmax(260px, 1fr) minmax(220px, 0.7fr) minmax(230px, 0.78fr);
+  grid-template-columns: minmax(260px, 1fr) minmax(220px, 0.7fr) minmax(
+      230px,
+      0.78fr
+    );
   gap: 24px;
   align-items: center;
   margin-bottom: 18px;
@@ -463,7 +505,12 @@ header h1 {
   border-radius: 10px;
   padding: 22px;
   background:
-    linear-gradient(135deg, rgba(0, 107, 91, 0.1), rgba(216, 92, 74, 0.08) 52%, rgba(43, 104, 184, 0.08)),
+    linear-gradient(
+      135deg,
+      rgba(0, 107, 91, 0.1),
+      rgba(216, 92, 74, 0.08) 52%,
+      rgba(43, 104, 184, 0.08)
+    ),
     white;
   box-shadow: var(--shadow);
 }
@@ -508,7 +555,9 @@ header h1 {
   font-weight: 900;
 }
 
-.meterLegend strong { color: var(--ink); }
+.meterLegend strong {
+  color: var(--ink);
+}
 
 .bannerStats {
   display: grid;
@@ -539,7 +588,8 @@ header h1 {
   margin-bottom: 18px;
 }
 
-.statCard, .panel {
+.statCard,
+.panel {
   border: 1px solid var(--line);
   border-radius: 10px;
   background: var(--panel);
@@ -562,9 +612,15 @@ header h1 {
   background: var(--green);
 }
 
-.statCard.amber::before { background: var(--gold); }
-.statCard.rose::before { background: var(--coral); }
-.statCard.blue::before { background: var(--blue); }
+.statCard.amber::before {
+  background: var(--gold);
+}
+.statCard.rose::before {
+  background: var(--coral);
+}
+.statCard.blue::before {
+  background: var(--blue);
+}
 
 .statTop {
   display: flex;
@@ -580,11 +636,18 @@ header h1 {
   background: var(--green);
 }
 
-.statCard.amber .statTop i { background: var(--gold); }
-.statCard.rose .statTop i { background: var(--coral); }
-.statCard.blue .statTop i { background: var(--blue); }
+.statCard.amber .statTop i {
+  background: var(--gold);
+}
+.statCard.rose .statTop i {
+  background: var(--coral);
+}
+.statCard.blue .statTop i {
+  background: var(--blue);
+}
 
-.statCard span, .panelHead span {
+.statCard span,
+.panelHead span {
   color: var(--muted);
   font-size: 13px;
   font-weight: 850;
@@ -615,7 +678,8 @@ header h1 {
   margin-bottom: 14px;
 }
 
-.panelHead h2, .formPanel h2 {
+.panelHead h2,
+.formPanel h2 {
   margin: 0;
   font-size: 18px;
   letter-spacing: 0;
@@ -628,7 +692,9 @@ header h1 {
   align-items: start;
 }
 
-.wide { min-width: 0; }
+.wide {
+  min-width: 0;
+}
 
 .formPanel {
   position: sticky;
@@ -649,7 +715,8 @@ table {
   border-collapse: collapse;
 }
 
-th, td {
+th,
+td {
   padding: 12px 14px;
   border-bottom: 1px solid var(--line);
   text-align: left;
@@ -677,8 +744,12 @@ tbody tr:hover {
   background: #fbfcf9;
 }
 
-tr:last-child td { border-bottom: 0; }
-.right { text-align: right; }
+tr:last-child td {
+  border-bottom: 0;
+}
+.right {
+  text-align: right;
+}
 
 .empty {
   padding: 32px;
@@ -692,7 +763,8 @@ tr:last-child td { border-bottom: 0; }
   gap: 8px;
 }
 
-.actionCell button, td button {
+.actionCell button,
+td button {
   min-height: 32px;
   border-radius: 6px;
   padding: 0 10px;
@@ -702,7 +774,8 @@ tr:last-child td { border-bottom: 0; }
   font-weight: 950;
 }
 
-.actionCell button:hover, td button:hover {
+.actionCell button:hover,
+td button:hover {
   background: #ccebdd;
 }
 
@@ -717,17 +790,30 @@ tr:last-child td { border-bottom: 0; }
   letter-spacing: 0.02em;
 }
 
-.badge.good { background: #dff6e9; color: #126a41; }
-.badge.warn { background: var(--gold-soft); color: #8c5a10; }
-.badge.bad { background: var(--red-soft); color: var(--red); }
-.badge.neutral { background: #e8eef3; color: #465466; }
+.badge.good {
+  background: #dff6e9;
+  color: #126a41;
+}
+.badge.warn {
+  background: var(--gold-soft);
+  color: #8c5a10;
+}
+.badge.bad {
+  background: var(--red-soft);
+  color: var(--red);
+}
+.badge.neutral {
+  background: #e8eef3;
+  color: #465466;
+}
 
 .stack {
   display: grid;
   gap: 18px;
 }
 
-.gridTwo, .reportGrid {
+.gridTwo,
+.reportGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 18px;
@@ -746,7 +832,9 @@ tr:last-child td { border-bottom: 0; }
   margin-top: 14px;
 }
 
-.chartPanel { min-height: 280px; }
+.chartPanel {
+  min-height: 280px;
+}
 
 .bars {
   display: grid;
@@ -801,7 +889,12 @@ tr:last-child td { border-bottom: 0; }
 }
 
 @media (max-width: 980px) {
-  .authPage, .appShell, .workspace, .gridTwo, .reportGrid, .profileGrid {
+  .authPage,
+  .appShell,
+  .workspace,
+  .gridTwo,
+  .reportGrid,
+  .profileGrid {
     grid-template-columns: 1fr;
   }
 
@@ -810,7 +903,9 @@ tr:last-child td { border-bottom: 0; }
     padding: 28px;
   }
 
-  .authVisual::after { inset: 20px; }
+  .authVisual::after {
+    inset: 20px;
+  }
 
   .authCopy {
     padding: 30px;
@@ -835,7 +930,8 @@ tr:last-child td { border-bottom: 0; }
 }
 
 @media (max-width: 620px) {
-  .content, .authPanel {
+  .content,
+  .authPanel {
     padding: 20px;
   }
 
@@ -844,7 +940,8 @@ tr:last-child td { border-bottom: 0; }
     flex-direction: column;
   }
 
-  .statsGrid, .bannerStats {
+  .statsGrid,
+  .bannerStats {
     grid-template-columns: 1fr;
   }
 
@@ -854,5 +951,554 @@ tr:last-child td { border-bottom: 0; }
 
   .barRow strong {
     text-align: left;
+  }
+}
+
+/* Toasts */
+
+.toastStack {
+  position: fixed;
+  top: 18px;
+  right: 18px;
+  z-index: 2000;
+  display: grid;
+  gap: 10px;
+  width: min(360px, calc(100vw - 36px));
+  pointer-events: none;
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 48px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: white;
+  box-shadow: var(--shadow);
+  pointer-events: auto;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.toast.success {
+  border-color: rgba(0, 107, 91, 0.24);
+}
+
+.toast.error {
+  border-color: rgba(180, 35, 24, 0.24);
+  color: var(--red);
+}
+
+.toastClose {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 20px;
+  line-height: 1;
+}
+
+.toastClose:hover {
+  background: #f1f4f2;
+}
+
+/* Modal */
+
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1500;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(22, 32, 51, 0.48);
+  backdrop-filter: blur(4px);
+}
+
+.modal {
+  width: min(620px, 100%);
+  max-height: min(760px, calc(100vh - 48px));
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: white;
+  box-shadow: 0 28px 80px rgba(22, 32, 51, 0.2);
+}
+
+.modalHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--line);
+}
+
+.modalHead h2 {
+  margin: 0;
+  font-size: 20px;
+  line-height: 1.2;
+}
+
+.modalClose {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 6px;
+  background: #f1f4f2;
+  color: var(--ink-soft);
+  font-size: 22px;
+  line-height: 1;
+}
+
+.modalClose:hover {
+  background: #e5ebe7;
+}
+
+.modalBody {
+  padding: 20px;
+}
+
+/* Confirm dialog */
+
+.confirmDialog {
+  display: grid;
+  gap: 20px;
+}
+
+.confirmDialog p {
+  margin: 0;
+  color: var(--ink-soft);
+  line-height: 1.6;
+}
+
+.confirmActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.secondary {
+  min-height: 44px;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  padding: 0 15px;
+  background: white;
+  color: var(--ink-soft);
+  font-weight: 900;
+}
+
+.secondary:hover {
+  background: #f4f7f4;
+}
+
+.secondary:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+/* Tabs */
+
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 18px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f4f7f4;
+}
+
+.tabs button {
+  min-height: 38px;
+  border-radius: 6px;
+  padding: 0 14px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.tabs button:hover {
+  color: var(--green-dark);
+  background: white;
+}
+
+.tabs button.active {
+  background: white;
+  color: var(--green-dark);
+  box-shadow: 0 2px 8px rgba(22, 32, 51, 0.08);
+}
+
+/* Page state */
+
+.pageState {
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+  padding: 42px;
+  text-align: center;
+}
+
+.pageState p {
+  margin: 0;
+  color: var(--red);
+  font-weight: 850;
+}
+
+.emptyState {
+  color: var(--muted);
+  font-weight: 850;
+}
+
+.fieldHint {
+  margin-top: -2px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.guestWelcome {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: white;
+  box-shadow: var(--shadow);
+}
+
+.guestWelcome h2 {
+  margin: 4px 0 8px;
+}
+
+.guestWelcome p:not(.eyebrow) {
+  margin: 0;
+  max-width: 680px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.stayCard {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  padding: 20px;
+  border-radius: 10px;
+  background: #f7f9f7;
+}
+
+.stayCard > div {
+  display: grid;
+  gap: 4px;
+}
+
+.stayCard strong {
+  font-size: 15px;
+}
+
+.bookingList {
+  display: grid;
+  gap: 10px;
+}
+
+.bookingItem {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  align-items: center;
+  gap: 16px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.bookingItem > div {
+  display: grid;
+  gap: 4px;
+}
+
+.bookingItem span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.bookingItem strong {
+  font-size: 13px;
+}
+
+@media (max-width: 800px) {
+  .guestWelcome {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .stayCard {
+    grid-template-columns: 1fr;
+  }
+
+  .bookingItem {
+    grid-template-columns: 1fr;
+  }
+}
+
+.dateSearch {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 220px));
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.roomGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.roomCard {
+  display: grid;
+  gap: 18px;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: white;
+  box-shadow: var(--shadow);
+}
+
+.roomCardTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.roomCardTop h3 {
+  margin: 4px 0 0;
+  font-size: 20px;
+}
+
+.roomFloor {
+  padding: 5px 8px;
+  border-radius: 6px;
+  background: #f1f4f2;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.roomFacts,
+.roomDates {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.roomFacts > div,
+.roomDates > div {
+  display: grid;
+  gap: 4px;
+}
+
+.roomFacts span,
+.roomDates span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.roomFacts strong,
+.roomDates strong {
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.roomCardBottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.roomCardBottom > strong {
+  font-size: 18px;
+}
+
+@media (max-width: 700px) {
+  .dateSearch,
+  .roomFacts,
+  .roomDates {
+    grid-template-columns: 1fr;
+  }
+
+  .roomCardBottom {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .roomCardBottom button {
+    width: 100%;
+  }
+}
+.roomStatusCell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.roomStatusCell select {
+  min-width: 125px;
+  min-height: 34px;
+  padding: 0 8px;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: white;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.panelActions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.rowActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.dangerButton {
+  min-height: 38px;
+  border: 1px solid rgba(180, 35, 24, 0.25);
+  border-radius: 6px;
+  padding: 0 12px;
+  background: #fff;
+  color: var(--red);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.dangerButton:hover {
+  background: #fff5f4;
+}
+
+.formActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.fieldError {
+  color: var(--red);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.inlineButton {
+  padding: 0;
+  background: transparent;
+  color: var(--green-dark);
+  font-size: 11px;
+  font-weight: 900;
+  text-decoration: underline;
+}
+
+@media (max-width: 700px) {
+  .panelActions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .panelActions button {
+    width: 100%;
+  }
+}
+
+/* Step 5 cross-cutting fixes */
+
+.tableScroll {
+  width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.tableScroll table {
+  width: 100%;
+  min-width: 760px;
+}
+
+.tableState {
+  padding: 42px 18px;
+  color: var(--muted);
+  font-weight: 850;
+  text-align: center;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+}
+
+.inlineControl {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: end;
+}
+
+@media (max-width: 980px) {
+  .appShell {
+    grid-template-columns: 1fr;
+  }
+
+  aside {
+    position: static;
+    height: auto;
+    padding: 16px 18px;
+  }
+
+  aside nav {
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(150px, 1fr);
+    grid-template-columns: none;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+
+  nav button {
+    min-width: 150px;
+  }
+
+  .userBox {
+    margin-top: 14px;
+  }
+}
+
+@media (max-width: 620px) {
+  .tableScroll table {
+    min-width: 680px;
+  }
+
+  .inlineControl {
+    grid-template-columns: 1fr;
   }
 }

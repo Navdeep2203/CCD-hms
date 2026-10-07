@@ -1,33 +1,71 @@
+const BASE = import.meta.env.VITE_API_BASE || "http://127.0.0.1:8000/api";
 let token = "";
+let onUnauthorized = () => {};
 
-export function setToken(value) {
+export const setToken = (value) => {
   token = value || "";
-}
+};
 
-const API_BASE = import.meta.env.VITE_API_BASE || "http://127.0.0.1:8000/api";
+export const setUnauthorizedHandler = (fn) => {
+  onUnauthorized = fn;
+};
 
 async function request(path, options = {}) {
-  const response = await fetch(`${API_BASE}${path}`, {
+  const response = await fetch(`${BASE}${path}`, {
     ...options,
     headers: {
       "Content-Type": "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...(options.headers || {})
-    }
+    },
   });
+
   const text = await response.text();
-  const data = text ? JSON.parse(text) : null;
-  if (!response.ok) {
-    throw new Error(data?.detail || "Request failed");
+
+  let data = null;
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch {
+    /* not JSON */
   }
+
+  if (!response.ok) {
+    if (response.status === 401 && !path.startsWith("/auth/login")) {
+      onUnauthorized();
+    }
+
+    throw new Error(
+      typeof data?.detail === "string"
+        ? data.detail
+        : `Request failed (${response.status})`,
+    );
+  }
+
   return data;
 }
 
 export const api = {
-  get: (path) => request(path),
-  post: (path, body) => request(path, { method: "POST", body: JSON.stringify(body) }),
-  put: (path, body) => request(path, { method: "PUT", body: JSON.stringify(body) }),
-  patch: (path, body) => request(path, { method: "PATCH", body: JSON.stringify(body) }),
-  delete: (path) => request(path, { method: "DELETE" })
-};
+  get: (p) => request(p),
 
+  post: (p, body) =>
+    request(p, {
+      method: "POST",
+      body: JSON.stringify(body ?? {}),
+    }),
+
+  put: (p, body) =>
+    request(p, {
+      method: "PUT",
+      body: JSON.stringify(body ?? {}),
+    }),
+
+  patch: (p, body) =>
+    request(p, {
+      method: "PATCH",
+      body: JSON.stringify(body ?? {}),
+    }),
+
+  delete: (p) =>
+    request(p, {
+      method: "DELETE",
+    }),
+};
