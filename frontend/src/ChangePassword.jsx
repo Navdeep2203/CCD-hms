@@ -36,7 +36,7 @@ export default function ChangePassword() {
       <section className="authVisual">
         <div className="authCopy">
           <div className="brandLockup">
-            <div className="brandMark large">MH</div>
+            <div className="brandMark large">GH</div>
             <span>{HOTEL_NAME}</span>
           </div>
 
@@ -53,10 +53,10 @@ export default function ChangePassword() {
 
       <section className="authPanel">
         <div className="authCardHead">
-          <div className="brandMark">MH</div>
+          <div className="brandMark">GH</div>
 
           <div>
-            <strong>{HOTEL_NAME} HMS</strong>
+            <strong>{HOTEL_NAME} PMS</strong>
             <span>Hotel operations console</span>
           </div>
         </div>

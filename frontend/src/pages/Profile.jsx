@@ -5,6 +5,7 @@ import { useAuth } from "../auth/AuthContext";
 import { useAction } from "../hooks/useAction";
 import { useToast } from "../components/Toast";
 import Modal from "../components/Modal";
+import PageHeader from "../components/PageHeader";
 
 const EMPTY_PROFILE = {
   name: "",
@@ -126,26 +127,26 @@ export default function Profile() {
 
   return (
     <section className="workspace">
-      <div className="panel wide">
-        <div className="panelHead">
-          <div>
-            <p className="eyebrow">Account</p>
-            <h2>Profile</h2>
-          </div>
+      <PageHeader
+        eyebrow="Account"
+        title="Profile"
+        subtitle="Manage your personal details, address information, and security password."
+        secondaryActions={<span>{user.email}</span>}
+        primaryAction={
+          <button
+            type="button"
+            className="secondary"
+            onClick={() => {
+              setPasswordForm(EMPTY_PASSWORD);
+              setPasswordModalOpen(true);
+            }}
+          >
+            Change password
+          </button>
+        }
+      />
 
-          <div className="panelActions">
-            <span>{user.email}</span>
-            <button
-              type="button"
-              onClick={() => {
-                setPasswordForm(EMPTY_PASSWORD);
-                setPasswordModalOpen(true);
-              }}
-            >
-              Change password
-            </button>
-          </div>
-        </div>
+      <div className="panel wide">
 
         <form
           className="form"

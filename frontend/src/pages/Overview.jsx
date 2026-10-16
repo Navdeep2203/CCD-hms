@@ -6,6 +6,7 @@ import DataTable from "../components/DataTable";
 import Badge from "../components/Badge";
 import StatCard from "../components/StatCard";
 import PageState from "../components/PageState";
+import PageHeader from "../components/PageHeader";
 import { currency, fmtDate } from "../utils/format";
 
 function GuestOverview({ data }) {
@@ -13,20 +14,16 @@ function GuestOverview({ data }) {
 
   return (
     <section className="workspace">
-      <section className="guestWelcome">
-        <div>
-          <p className="eyebrow">My stay</p>
-          <h2>Welcome back</h2>
-          <p>
-            Keep track of your current stay, upcoming bookings, balance, and
-            loyalty progress.
-          </p>
-        </div>
-
-        <Link to="/rooms" className="primary">
-          Book a room
-        </Link>
-      </section>
+      <PageHeader
+        eyebrow="My Stay"
+        title="Welcome back"
+        subtitle="Keep track of your current stay, upcoming bookings, balance, and loyalty progress."
+        primaryAction={
+          <Link to="/rooms" className="primary">
+            Book a room
+          </Link>
+        }
+      />
 
       <section className="statsGrid">
         <StatCard
@@ -136,6 +133,12 @@ function OperationsOverview({ data }) {
 
   return (
     <section className="workspace">
+      <PageHeader
+        eyebrow="Operations"
+        title="Property Overview"
+        subtitle="Live occupancy, pending approvals, daily arrivals, and housekeeping status."
+      />
+
       <section className="opsBanner">
         <div>
           <p className="eyebrow">Today at a glance</p>

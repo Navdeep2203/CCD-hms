@@ -5,6 +5,7 @@ import PageState from "../components/PageState";
 import DataTable from "../components/DataTable";
 import Badge from "../components/Badge";
 import StatCard from "../components/StatCard";
+import PageHeader from "../components/PageHeader";
 import { currency } from "../utils/format";
 
 function sumValues(rows) {
@@ -48,16 +49,18 @@ export default function Reports() {
 
   return (
     <section className="workspace">
-      <div className="panel wide">
-        <div className="panelHead">
-          <div>
-            <p className="eyebrow">Analytics</p>
-            <h2>Reports</h2>
-          </div>
-          <button type="button" onClick={reload}>
+      <PageHeader
+        eyebrow="Analytics"
+        title="Operational Reports"
+        subtitle="Comprehensive metrics on hotel revenue performance, booking volume, and amenities."
+        primaryAction={
+          <button type="button" className="secondary" onClick={reload}>
             Refresh
           </button>
-        </div>
+        }
+      />
+
+      <div className="panel wide">
 
         <div className="statsGrid">
           <StatCard label="Recorded revenue" value={currency(totalRevenue)} />

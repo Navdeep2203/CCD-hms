@@ -10,6 +10,8 @@ import Badge from "../components/Badge";
 import PageState from "../components/PageState";
 import Modal from "../components/Modal";
 import ConfirmDialog from "../components/ConfirmDialog";
+import PageHeader from "../components/PageHeader";
+import Toolbar from "../components/Toolbar";
 import { currency, fmtDate } from "../utils/format";
 
 const EMPTY_SERVICE_FORM = {
@@ -201,31 +203,40 @@ export default function Services() {
 
   return (
     <section className="workspace">
-      <div className="panel wide">
-        <div className="panelHead">
-          <div>
-            <p className="eyebrow">Hotel services</p>
-            <h2>{isCustomer ? "My service usage" : "Service usage"}</h2>
-          </div>
-
-          <div className="panelActions">
-            <span>{usageRows.length} records</span>
+      <PageHeader
+        eyebrow="Hotel Services"
+        title={isCustomer ? "My Service Usage" : "Service Usage"}
+        subtitle={
+          isCustomer
+            ? "View and order amenities and services for your active stay."
+            : "Track guest service orders, amenities consumption, and services catalog."
+        }
+        primaryAction={
+          <button
+            type="button"
+            className="primary"
+            onClick={openAddUsage}
+            disabled={bookingRows.length === 0 || serviceRows.length === 0}
+          >
+            Add service
+          </button>
+        }
+        secondaryActions={
+          isManagement ? (
             <button
               type="button"
-              className="primary"
-              onClick={openAddUsage}
-              disabled={bookingRows.length === 0 || serviceRows.length === 0}
+              className="secondary"
+              onClick={openAddService}
             >
-              Add service
+              Manage services
             </button>
+          ) : null
+        }
+      />
 
-            {isManagement && (
-              <button type="button" onClick={openAddService}>
-                Manage services
-              </button>
-            )}
-          </div>
-        </div>
+      <Toolbar actions={<span>{usageRows.length} records</span>} />
+
+      <div className="panel wide">
 
         {bookingsError && (
           <p className="error">

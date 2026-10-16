@@ -21,6 +21,8 @@ import Modal from "../components/Modal";
 import ConfirmDialog from "../components/ConfirmDialog";
 
 import Tabs from "../components/Tabs";
+import PageHeader from "../components/PageHeader";
+import Toolbar from "../components/Toolbar";
 
 import { addDays, currency, fmtDate, nullify, today } from "../utils/format";
 
@@ -400,45 +402,38 @@ export default function Rooms() {
   if (isCustomer) {
     return (
       <section className="workspace">
-        <div className="panel wide">
-          <div className="panelHead">
-            <div>
-              <p className="eyebrow">Room search</p>
+        <PageHeader
+          eyebrow="Room Search"
+          title="Find a Room"
+          subtitle="Select dates to browse available rooms and reserve your stay."
+        />
 
-              <h2>Find a room</h2>
+        <Toolbar
+          filters={
+            <div className="dateSearch">
+              <label>
+                Check-in
+                <input
+                  type="date"
+                  value={checkIn}
+                  min={today()}
+                  onChange={(e) => handleCheckInChange(e.target.value)}
+                />
+              </label>
+
+              <label>
+                Check-out
+                <input
+                  type="date"
+                  value={checkOut}
+                  min={addDays(checkIn, 1)}
+                  onChange={(e) => setCheckOut(e.target.value)}
+                />
+              </label>
             </div>
-
-            <span>{roomRows.length} rooms available</span>
-          </div>
-
-          <div className="dateSearch">
-            <label>
-              Check-in
-              <input
-                type="date"
-
-                value={checkIn}
-
-                min={today()}
-
-                onChange={(e) => handleCheckInChange(e.target.value)}
-              />
-            </label>
-
-            <label>
-              Check-out
-              <input
-                type="date"
-
-                value={checkOut}
-
-                min={addDays(checkIn, 1)}
-
-                onChange={(e) => setCheckOut(e.target.value)}
-              />
-            </label>
-          </div>
-        </div>
+          }
+          actions={<span>{roomRows.length} rooms available</span>}
+        />
 
         {roomRows.length === 0 ? (
           <PageState empty={"No rooms are available for those dates."} />
@@ -558,7 +553,29 @@ export default function Rooms() {
 
   return (
     <section className="workspace">
-      <Tabs
+      <PageHeader
+        eyebrow="Inventory"
+        title={activeTab === "rooms" ? "Room Inventory" : "Room Types"}
+        subtitle={
+          activeTab === "rooms"
+            ? "Manage room status, floor assignments, and capacities."
+            : "Configure room categories, guest capacities, and nightly base rates."
+        }
+        primaryAction={
+          isManagement && activeTab === "rooms" ? (
+            <button type="button" className="primary" onClick={openAddRoom}>
+              Add room
+            </button>
+          ) : isManagement && activeTab === "roomTypes" ? (
+            <button
+              type="button"
+              className="primary"
+              onClick={openAddRoomType}
+            >
+              Add room type
+            </button>
+          ) : null
+        }
         tabs={
           isManagement
             ? [
@@ -568,34 +585,12 @@ export default function Rooms() {
             : [{ id: "rooms", label: "Rooms" }]
         }
         activeTab={activeTab}
-        onChange={setActiveTab}
+        onTabChange={setActiveTab}
       />
 
       {activeTab === "rooms" && (
         <div className="panel wide">
-          <div className="panelHead">
-            <div>
-              <p className="eyebrow">Inventory</p>
-
-              <h2>Room inventory</h2>
-            </div>
-
-            <div className="panelActions">
-              <span>{roomRows.length} rooms</span>
-
-              {isManagement && (
-                <button
-                  type="button"
-
-                  className="primary"
-
-                  onClick={openAddRoom}
-                >
-                  Add room
-                </button>
-              )}
-            </div>
-          </div>
+          <Toolbar actions={<span>{roomRows.length} rooms</span>} />
 
           <DataTable
             rows={roomRows}
@@ -709,23 +704,7 @@ export default function Rooms() {
 
       {activeTab === "roomTypes" && isManagement && (
         <div className="panel wide">
-          <div className="panelHead">
-            <div>
-              <p className="eyebrow">Room configuration</p>
-              <h2>Room types</h2>
-            </div>
-
-            <div className="panelActions">
-              <span>{typeRows.length} types</span>
-              <button
-                type="button"
-                className="primary"
-                onClick={openAddRoomType}
-              >
-                Add room type
-              </button>
-            </div>
-          </div>
+          <Toolbar actions={<span>{typeRows.length} types</span>} />
 
           {roomTypesLoading ? (
             <PageState loading />

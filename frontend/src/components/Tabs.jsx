@@ -1,4 +1,5 @@
-export default function Tabs({ tabs, activeTab, onChange }) {
+export default function Tabs({ tabs, activeTab, value, onChange }) {
+  const current = activeTab ?? value;
   return (
     <div className="tabs" role="tablist">
       {tabs.map((tab) => (
@@ -6,8 +7,8 @@ export default function Tabs({ tabs, activeTab, onChange }) {
           key={tab.id}
           type="button"
           role="tab"
-          aria-selected={activeTab === tab.id}
-          className={activeTab === tab.id ? "active" : ""}
+          aria-selected={current === tab.id}
+          className={current === tab.id ? "active" : ""}
           onClick={() => onChange(tab.id)}
         >
           {tab.label}

@@ -9,6 +9,8 @@ import DataTable from "../components/DataTable";
 import Badge from "../components/Badge";
 import PageState from "../components/PageState";
 import Modal from "../components/Modal";
+import PageHeader from "../components/PageHeader";
+import Toolbar from "../components/Toolbar";
 import { fmtDate } from "../utils/format";
 
 const EMPTY_FORM = {
@@ -163,22 +165,23 @@ export default function Maintenance() {
 
   return (
     <section className="workspace">
-      <div className="panel wide">
-        <div className="panelHead">
-          <div>
-            <p className="eyebrow">Room operations</p>
-            <h2>{isManagement ? "Maintenance" : "My tasks"}</h2>
-          </div>
+      <PageHeader
+        eyebrow="Room Operations"
+        title={isManagement ? "Maintenance Management" : "My Tasks"}
+        subtitle={
+          isManagement
+            ? "Track and manage hotel room repair requests and housekeeping issues."
+            : "View assigned maintenance tickets and update resolution progress."
+        }
+        primaryAction={
+          <button type="button" className="primary" onClick={openCreate}>
+            Report issue
+          </button>
+        }
+      />
 
-          <div className="panelActions">
-            <span>{filteredRows.length} tasks</span>
-            <button type="button" className="primary" onClick={openCreate}>
-              Report issue
-            </button>
-          </div>
-        </div>
-
-        <div className="filterBar">
+      <Toolbar
+        filters={
           <label>
             Status
             <select
@@ -191,7 +194,11 @@ export default function Maintenance() {
               <option value="COMPLETED">COMPLETED</option>
             </select>
           </label>
-        </div>
+        }
+        actions={<span>{filteredRows.length} tasks</span>}
+      />
+
+      <div className="panel wide">
 
         {roomsError && <p className="error">{roomsError}</p>}
 

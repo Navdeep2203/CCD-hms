@@ -21,7 +21,7 @@ export default function DataTable({
             {columns.map((column) => (
               <th key={column.key}>{column.label}</th>
             ))}
-            {actions && <th>Actions</th>}
+            {actions && <th className="actionHeader">Actions</th>}
           </tr>
         </thead>
 
@@ -45,7 +45,7 @@ export default function DataTable({
               }
             >
               {columns.map((column) => (
-                <td key={column.key}>
+                <td key={column.key} data-label={column.label}>
                   {typeof column.render === "function"
                     ? column.render(row)
                     : (row[column.key] ?? "—")}
@@ -53,7 +53,7 @@ export default function DataTable({
               ))}
 
               {actions && (
-                <td>
+                <td className="actionCellCol" data-label="Actions">
                   {typeof actions === "function" ? actions(row) : actions}
                 </td>
               )}

@@ -9,6 +9,8 @@ import DataTable from "../components/DataTable";
 import Badge from "../components/Badge";
 import PageState from "../components/PageState";
 import Modal from "../components/Modal";
+import PageHeader from "../components/PageHeader";
+import Toolbar from "../components/Toolbar";
 
 const EMPTY_FORM = {
   name: "",
@@ -129,43 +131,39 @@ export default function Customers() {
 
   return (
     <section className="workspace">
-      <div className="panel wide">
-        <div className="panelHead">
-          <div>
-            <p className="eyebrow">Guest records</p>
-            <h2>Customers</h2>
-          </div>
+      <PageHeader
+        eyebrow="Guest Records"
+        title="Customers"
+        subtitle="View and manage registered hotel guests, profiles, and contact details."
+        primaryAction={
+          <button type="button" className="primary" onClick={openCreateGuest}>
+            Create guest
+          </button>
+        }
+      />
 
-          <div className="panelActions">
-            <span>{rows.length} guests</span>
-            <button type="button" className="primary" onClick={openCreateGuest}>
-              Create guest
-            </button>
-          </div>
-        </div>
-
-        <div className="filterBar">
-          <form onSubmit={submitSearch}>
-            <label>
-              Search
-              <input
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="Name, email or phone"
-              />
-            </label>
-
-            <button type="submit" className="secondary">
-              Search
-            </button>
-
+      <Toolbar
+        search={search}
+        onSearchChange={setSearch}
+        onSearchSubmit={submitSearch}
+        searchPlaceholder="Name, email or phone"
+        actions={
+          <>
             {appliedSearch && (
-              <button type="button" onClick={clearSearch}>
+              <button
+                type="button"
+                className="secondary"
+                onClick={clearSearch}
+              >
                 Clear
               </button>
             )}
-          </form>
-        </div>
+            <span>{rows.length} guests</span>
+          </>
+        }
+      />
+
+      <div className="panel wide">
 
         <DataTable
           rows={rows}
