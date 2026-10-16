@@ -11,6 +11,8 @@ import PageState from "../components/PageState";
 import Modal from "../components/Modal";
 import ConfirmDialog from "../components/ConfirmDialog";
 import Tabs from "../components/Tabs";
+import PageHeader from "../components/PageHeader";
+import Toolbar from "../components/Toolbar";
 import { currency } from "../utils/format";
 
 const STAFF_EMPTY = {
@@ -571,22 +573,50 @@ export default function Staff() {
 
   return (
     <section className="workspace">
-      <Tabs tabs={tabs} value={activeTab} onChange={setActiveTab} />
-
-      {activeTab === "staff" && (
-        <div className="panel wide">
-          <div className="panelHead">
-            <div>
-              <p className="eyebrow">Personnel</p>
-              <h2>Staff</h2>
-            </div>
+      <PageHeader
+        eyebrow="Personnel"
+        title={
+          activeTab === "staff"
+            ? "Staff Members"
+            : activeTab === "managers"
+            ? "Department Managers"
+            : "Departments"
+        }
+        subtitle={
+          activeTab === "staff"
+            ? "Manage employee profiles, department allocations, and roles."
+            : activeTab === "managers"
+            ? "Manage management personnel and reporting hierarchies."
+            : "Organize hotel operational departments and team leads."
+        }
+        primaryAction={
+          activeTab === "staff" ? (
             <button type="button" className="primary" onClick={openAddStaff}>
               Add staff
             </button>
-          </div>
+          ) : activeTab === "managers" && isAdmin ? (
+            <button type="button" className="primary" onClick={openAddManager}>
+              Add manager
+            </button>
+          ) : activeTab === "departments" && isAdmin ? (
+            <button
+              type="button"
+              className="primary"
+              onClick={openAddDepartment}
+            >
+              Add department
+            </button>
+          ) : null
+        }
+        tabs={tabs}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+      />
 
-          <div className="filterBar">
-            <form onSubmit={updateStaffFilter}>
+      {activeTab === "staff" && (
+        <div className="panel wide">
+          <Toolbar>
+            <form className="toolbarFilters" onSubmit={updateStaffFilter}>
               <label>
                 Search
                 <input
@@ -629,11 +659,15 @@ export default function Staff() {
               <button type="submit" className="secondary">
                 Filter
               </button>
-              <button type="button" onClick={clearStaffFilter}>
+              <button
+                type="button"
+                className="secondary"
+                onClick={clearStaffFilter}
+              >
                 Clear
               </button>
             </form>
-          </div>
+          </Toolbar>
 
           {departmentsError && <p className="error">{departmentsError}</p>}
 
@@ -707,15 +741,7 @@ export default function Staff() {
 
       {activeTab === "managers" && isAdmin && (
         <div className="panel wide">
-          <div className="panelHead">
-            <div>
-              <p className="eyebrow">Personnel</p>
-              <h2>Managers</h2>
-            </div>
-            <button type="button" className="primary" onClick={openAddManager}>
-              Add manager
-            </button>
-          </div>
+          <Toolbar actions={<span>{managerRows.length} managers</span>} />
 
           {managersError ? <p className="error">{managersError}</p> : null}
 
@@ -784,21 +810,7 @@ export default function Staff() {
 
       {activeTab === "departments" && (
         <div className="panel wide">
-          <div className="panelHead">
-            <div>
-              <p className="eyebrow">Organisation</p>
-              <h2>Departments</h2>
-            </div>
-            {isAdmin && (
-              <button
-                type="button"
-                className="primary"
-                onClick={openAddDepartment}
-              >
-                Add department
-              </button>
-            )}
-          </div>
+          <Toolbar actions={<span>{departmentRows.length} departments</span>} />
 
           <DataTable
             rows={departmentRows}

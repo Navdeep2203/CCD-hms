@@ -9,6 +9,8 @@ import DataTable from "../components/DataTable";
 import Badge from "../components/Badge";
 import PageState from "../components/PageState";
 import Modal from "../components/Modal";
+import PageHeader from "../components/PageHeader";
+import Toolbar from "../components/Toolbar";
 import { currency, fmtDate } from "../utils/format";
 
 function paymentStateLabel(value) {
@@ -176,46 +178,40 @@ export default function Billing() {
 
   return (
     <section className="workspace">
-      <div className="panel wide">
-        <div className="panelHead">
-          <div>
-            <p className="eyebrow">Finance</p>
-            <h2>{isCustomer ? "My invoices" : "Invoices and payments"}</h2>
-          </div>
-          <div className="panelActions">
-            <span>{rows.length} invoices</span>
-            {payableRows.some((row) => Number(row.balance_due) > 0) && (
-              <button
-                type="button"
-                className="primary"
-                onClick={() => openPayment()}
-              >
-                Make payment
-              </button>
-            )}
-          </div>
-        </div>
-
-        <div className="filterBar">
-          <form onSubmit={handleSearch}>
-            <label>
-              Search
-              <input
-                type="search"
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder={
-                  isCustomer
-                    ? "Invoice ID or room"
-                    : "Guest, room or invoice ID"
-                }
-              />
-            </label>
-            <button type="submit" className="secondary">
-              Search
+      <PageHeader
+        eyebrow="Finance"
+        title={isCustomer ? "My Invoices" : "Invoices & Payments"}
+        subtitle={
+          isCustomer
+            ? "View your billing records and pay outstanding balances."
+            : "Review guest billing statements, balances, and recorded payments."
+        }
+        primaryAction={
+          payableRows.some((row) => Number(row.balance_due) > 0) ? (
+            <button
+              type="button"
+              className="primary"
+              onClick={() => openPayment()}
+            >
+              Make payment
             </button>
-          </form>
-        </div>
+          ) : null
+        }
+      />
+
+      <Toolbar
+        search={search}
+        onSearchChange={setSearch}
+        onSearchSubmit={handleSearch}
+        searchPlaceholder={
+          isCustomer
+            ? "Invoice ID or room"
+            : "Guest, room or invoice ID"
+        }
+        actions={<span>{rows.length} invoices</span>}
+      />
+
+      <div className="panel wide">
 
         <DataTable
           rows={rows}

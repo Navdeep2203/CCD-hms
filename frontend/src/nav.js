@@ -1,4 +1,4 @@
-export const HOTEL_NAME = "Meridian House";
+export const HOTEL_NAME = "The Grand Horizon";
 
 export const ALL_ROLES = [
   "ROLE_ADMIN",

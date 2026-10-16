@@ -11,6 +11,8 @@ import Badge from "../components/Badge";
 import PageState from "../components/PageState";
 import Modal from "../components/Modal";
 import ConfirmDialog from "../components/ConfirmDialog";
+import PageHeader from "../components/PageHeader";
+import Toolbar from "../components/Toolbar";
 import { addDays, currency, fmtDate, today } from "../utils/format";
 
 const BOOKING_STATUSES = [
@@ -410,56 +412,43 @@ export default function Bookings() {
 
   return (
     <section className="workspace">
-      <div className="panel wide">
-        <div className="panelHead">
-          <div>
-            <p className="eyebrow">Reservations</p>
-            <h2>{isCustomer ? "My bookings" : "Booking lifecycle"}</h2>
-          </div>
-
-          <div className="panelActions">
-            <span>{rows.length} records</span>
-
-            {isCustomer ? (
-              <button
-                type="button"
-                className="primary"
-                onClick={() => navigate("/rooms")}
-              >
-                Book a room
-              </button>
-            ) : (
-              <button
-                type="button"
-                className="primary"
-                onClick={openNewBooking}
-              >
-                New booking
-              </button>
-            )}
-          </div>
-        </div>
-
-        <div className="filterBar">
-          <form onSubmit={handleBookingSearch}>
-            <label>
-              Search
-              <input
-                type="search"
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder={
-                  isCustomer
-                    ? "Booking ID or room"
-                    : "Guest, room or booking ID"
-                }
-              />
-            </label>
-            <button type="submit" className="secondary">
-              Search
+      <PageHeader
+        eyebrow="Reservations"
+        title={isCustomer ? "My Bookings" : "Booking Lifecycle"}
+        subtitle={
+          isCustomer
+            ? "Track and manage your upcoming and past room reservations."
+            : "Review booking requests, check guests in/out, and process invoices."
+        }
+        primaryAction={
+          isCustomer ? (
+            <button
+              type="button"
+              className="primary"
+              onClick={() => navigate("/rooms")}
+            >
+              Book a room
             </button>
-          </form>
+          ) : (
+            <button
+              type="button"
+              className="primary"
+              onClick={openNewBooking}
+            >
+              New booking
+            </button>
+          )
+        }
+      />
 
+      <Toolbar
+        search={search}
+        onSearchChange={setSearch}
+        onSearchSubmit={handleBookingSearch}
+        searchPlaceholder={
+          isCustomer ? "Booking ID or room" : "Guest, room or booking ID"
+        }
+        filters={
           <label>
             Status
             <select
@@ -474,7 +463,11 @@ export default function Bookings() {
               ))}
             </select>
           </label>
-        </div>
+        }
+        actions={<span>{rows.length} records</span>}
+      />
+
+      <div className="panel wide">
 
         <DataTable
           rows={rows}
