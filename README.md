@@ -22,6 +22,7 @@ payments, staff and maintenance management, and reports.
 9. [API overview](#api-overview)
 10. [Project structure](#project-structure)
 11. [Troubleshooting](#troubleshooting)
+12. [Running With Docker](#running-with-docker)
 12. [Security notes](#security-notes)
 13. [Roadmap](#roadmap)
 14. [Authors](#authors)
@@ -65,7 +66,7 @@ Highlights:
 | Node.js | 18 or newer (tested on 22) | `node --version` |
 | PostgreSQL | 14 or newer (tested on 16) | `psql --version` |
 
-Docker is **not** required yet.
+Docker is not required for the Quick start. It is needed only for Running with Docker
 
 ## Quick start
 
@@ -306,6 +307,116 @@ To add a schema change, add a new numbered file such as `003_your_change.sql` to
 | `Activate.ps1 cannot be loaded` (PowerShell) | `Set-ExecutionPolicy -Scope Process Bypass`, or use `activate.bat` in cmd |
 | Seed says "users already exist; skipping seed" | Expected on a database that already has data. Drop and recreate it for a clean demo |
 
+## Running with Docker
+
+The Docker setup runs the whole stack (PostgreSQL, backend, frontend) on one machine. It is the **test environment**: use it to try changes locally before they reach the hosted deployment. It is not meant for hosting.
+
+### Prerequisites
+
+- Docker Desktop (with the WSL2 backend on Windows) or Docker Engine, with Compose v2.
+- Nothing else. PostgreSQL, Python and Node run inside containers.
+
+### Quick start
+
+```bash
+# 1. Create your local settings file (it is git-ignored; never commit it)
+cp .env.example .env
+
+# 2. Generate the two secrets and paste them into .env
+python3 -c "import secrets; print(secrets.token_urlsafe(32))"   # DATABASE_PASSWORD
+python3 -c "import secrets; print(secrets.token_urlsafe(48))"   # JWT_SECRET
+
+# 3. Build and start everything
+docker compose -f docker-compose.yml -f docker-compose.test.yml up --build
+```
+
+When all three services show `healthy` in `docker compose ps`:
+
+- Frontend: <http://localhost:3000>
+- Backend API: <http://localhost:8000> (the interactive API docs are at `/docs`)
+
+Open the site as `localhost`, not `127.0.0.1`. The backend allows exactly one origin, and a browser treats the two addresses as different origins.
+
+Log in with one of the demo accounts listed at the top of `database/seed_demo.sql`. They exist only because this environment loads the demo seed.
+
+To avoid typing the two `-f` flags, set `COMPOSE_FILE` in `.env` (see the table below), after which `docker compose up --build` is enough.
+
+### Everyday commands
+
+| Task | Command |
+|---|---|
+| Start in the background | `docker compose -f docker-compose.yml -f docker-compose.test.yml up -d --build` |
+| Show service health | `docker compose ps` |
+| Follow backend logs | `docker compose logs -f backend` |
+| Stop, keeping the database | `docker compose down` |
+| Stop and **erase the database** (also reloads the demo seed next time) | `docker compose down -v` |
+
+### How the setup is organised
+
+| File | Purpose |
+|---|---|
+| `docker-compose.yml` | Shared definition of the three services. Deliberately not runnable on its own: it has no host ports, no CORS origin and no frontend API URL. |
+| `docker-compose.test.yml` | Local test values layered on top: ports bound to `127.0.0.1` only, the browser-facing URLs, and the demo seed. |
+| `backend/Dockerfile` | Backend image. Build it from the **repository root**, because it copies `database/migrations/`, which lives outside `backend/`. Stages: `base` (dependencies) and `prod` (the image that runs). |
+| `backend/entrypoint.sh` | Container start script: applies database migrations, then starts the API server. With `--seed` it also loads demo data. Any other argument is run as a command. |
+| `frontend/Dockerfile` | Frontend image. Stage one builds with Node, stage two serves the static files with unprivileged nginx. Build context is `frontend/`. |
+| `frontend/nginx.conf` | Serves the app, falls back to `index.html` for client-side routes, caches hashed assets, compresses text. |
+
+Building the images without Compose:
+
+```bash
+docker build -f backend/Dockerfile -t hms-backend .
+docker build --build-arg VITE_API_BASE=http://localhost:8000/api -t hms-frontend frontend
+```
+
+### Settings
+
+**Variables in `.env`** (Compose reads these to fill in the YAML):
+
+| Variable | Required | Purpose |
+|---|---|---|
+| `DATABASE_NAME` | yes | Database name, used by both the database container and the backend |
+| `DATABASE_USER` | yes | Database user, used by both |
+| `DATABASE_PASSWORD` | yes | **Secret.** Generate it; used by both |
+| `JWT_SECRET` | yes | **Secret.** At least 32 characters; used by the backend only |
+| `FRONTEND_PORT` | yes | Host port for the frontend; also used to build the allowed CORS origin |
+| `BACKEND_PORT` | yes | Host port for the API; also baked into the frontend as its API URL |
+| `COMPOSE_FILE` | no | Loads both Compose files automatically. Separator is `:` on Linux, macOS and WSL, `;` on native Windows |
+
+**Set by the Compose files** (not in `.env`):
+
+| Setting | Where | Value |
+|---|---|---|
+| `DATABASE_HOST` | `docker-compose.yml` | `db`, the name of the database service on the Compose network |
+| `CORS_ORIGINS` | `docker-compose.test.yml` | `http://localhost:${FRONTEND_PORT}` |
+| `VITE_API_BASE` (build argument) | `docker-compose.test.yml` | `http://localhost:${BACKEND_PORT}/api` |
+| `SEED_FILE` and the `--seed` argument | `docker-compose.test.yml` | Mounts `database/seed_demo.sql` read-only and loads it |
+
+**Built into the backend image:** `MIGRATIONS_DIR` and a default `PORT` of 8000. Everything else, including every secret, is supplied when the container starts. The backend's full list of settings and defaults is in `backend/app/core/config.py` and, for running without Docker, `backend/.env.example`.
+
+`VITE_API_BASE` is public, not secret: Vite compiles it into the JavaScript bundle that every visitor downloads. It is a build argument, so changing a port means rebuilding the frontend (`up --build`). The frontend build fails with a clear error if it is not provided.
+
+### Notes and limits
+
+- **Demo data loads only on the first start**, when the `users` table is empty. Restarting does not load it twice. `docker compose down -v` erases the database so the next start reloads it.
+- **Changing `DATABASE_PASSWORD` after the first start does not change the database's password.** PostgreSQL reads these settings only when it creates an empty volume, so the backend will fail to log in until you run `docker compose down -v`.
+- **Ports are bound to `127.0.0.1`**, so the stack is not reachable from other machines on your network.
+- **Never use this configuration for a real deployment.** The demo seed contains accounts with publicly known passwords. Real deployments do not seed demo data.
+- **The hosted environment is different.** The backend runs from the same `backend/Dockerfile`, with settings supplied by the hosting platform. The frontend is built from source by Vercel, so `frontend/Dockerfile` is used for local testing only. See `docs/ENVIRONMENTS.md`.
+
+### Troubleshooting
+
+| Symptom | Likely cause and fix |
+|---|---|
+| `required variable ... is missing` when running Compose | `.env` is missing or the value is empty. Check each variable in the table above. |
+| Compose uses a different secret than your `.env` | A variable exported in your shell overrides `.env`. Run `unset JWT_SECRET` (or the variable named) and retry. |
+| Backend exits at once with `JWT_SECRET is required` | The value is empty. The message mentions `backend/.env`, which applies only when running without Docker. |
+| Browser shows a CORS error | Open the site at exactly `http://localhost:<FRONTEND_PORT>`. After changing ports, rerun with `--build`. |
+| Backend cannot authenticate to the database | The password changed after the volume was created. Run `docker compose down -v`. |
+| No demo accounts exist | The database already had users. Run `docker compose down -v` and start again. |
+| `exec /app/entrypoint.sh: no such file or directory` | The script was checked out with Windows (CRLF) line endings. Run `git add --renormalize .` or re-clone. `.gitattributes` forces LF for new clones. |
+| `port is already allocated` | Change `FRONTEND_PORT` or `BACKEND_PORT` in `.env`. |
+
 ## Security notes
 
 - Never commit `.env` files or database dumps. The repository's `.gitignore` excludes them; keep it that way.
@@ -316,8 +427,7 @@ To add a schema change, add a new numbered file such as `003_your_change.sql` to
 ## Roadmap
 
 Application features are complete. Remaining work for the cloud and DevOps phase:
-
-- [ ] Dockerfiles for backend and frontend, and Docker Compose for local development
+- [x] Docker images and a Compose-based local test environment
 - [ ] GitHub Actions CI (tests and build) and CD (automatic deployment)
 - [ ] Managed PostgreSQL, backend and frontend hosting
 - [ ] Cloud object storage for room images, ID documents and invoice PDFs
