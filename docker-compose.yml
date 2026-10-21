@@ -1,0 +1,48 @@
+# Shared service definitions for the CCD-HMS stack.
+# This file is deliberately not runnable alone: it defines no host ports,
+# no local CORS origin, and no browser-facing frontend API URL.
+# For local testing, use:
+# docker compose -f docker-compose.yml -f docker-compose.test.yml up --build
+
+services:
+  db:
+    # Pin the PostgreSQL version to avoid uncontrolled upgrades from `latest`.
+    image: postgres:16.10
+    environment:
+      POSTGRES_DB: ${DATABASE_NAME:?Missing database name}
+      POSTGRES_USER: ${DATABASE_USER:?Missing database user}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:?Missing database password}
+    volumes:
+      - hms_db_vol:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+      target: prod
+    environment:
+      DATABASE_HOST: db
+      DATABASE_NAME: ${DATABASE_NAME:?Missing database name}
+      DATABASE_USER: ${DATABASE_USER:?Missing database user}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD:?Missing database password}
+      JWT_SECRET: ${JWT_SECRET:?Missing JWT secret}
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # Nginx serves static assets; the browser calls the backend separately.
+  # The frontend therefore does not need to wait for the backend to start.
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: production
+
+volumes:
+  hms_db_vol:
