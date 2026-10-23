@@ -1,0 +1,25 @@
+# Local test configuration for CCD-HMS.
+# Adds host ports, browser-facing configuration, and demo seed data.
+# Run with:
+# docker compose -f docker-compose.yml -f docker-compose.test.yml up --build
+# Alternatively, set COMPOSE_FILE in .env to load both files automatically.
+
+services:
+  backend:
+    restart: "no"
+    ports:
+      - "127.0.0.1:${BACKEND_PORT:?Missing backend port}:8000"
+    environment:
+      CORS_ORIGINS: "http://localhost:${FRONTEND_PORT:?Missing frontend port}"
+      SEED_FILE: /app/database/seed_demo.sql
+    volumes:
+      - ./database/seed_demo.sql:/app/database/seed_demo.sql:ro
+    command: ["--seed"]
+
+  frontend:
+    restart: "no"
+    ports:
+      - "127.0.0.1:${FRONTEND_PORT:?Missing frontend port}:8080"
+    build:
+      args:
+        VITE_API_BASE: http://localhost:${BACKEND_PORT:?Missing backend port}/api
