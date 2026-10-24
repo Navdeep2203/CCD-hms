@@ -1,0 +1,155 @@
+
+# CI = Continuous Integration.
+# Verify backend tests, frontend compilation, and Docker builds automatically.
+name: CI
+
+# Run CI when main receives commits or a PR targets main.
+# We intentionally omit path filters so changes aren't accidentally skipped.
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+# Least-privilege permissions: this workflow only needs to read repository code.
+permissions:
+  contents: read
+
+# Cancel older runs for the same workflow/ref when newer commits arrive.
+# This avoids wasting runner time on outdated code.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  # Test the backend against an isolated, disposable PostgreSQL instance.
+  backend:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+
+    # GitHub starts this database for the job and removes it afterwards.
+    # These credentials are for CI testing only, never production.
+    services:
+      postgres:
+        image: postgres:16.10
+        env:
+          POSTGRES_USER: hotel_user
+          POSTGRES_PASSWORD: hotel_password
+          POSTGRES_DB: hotel_test
+        ports:
+          - 5432:5432
+        # Wait for PostgreSQL to accept connections before running tests.
+        options: >-
+          --health-cmd "pg_isready -U hotel_user -d hotel_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          # Match the Python version used for CI validation.
+          python-version: "3.12"
+          # Cache pip downloads to speed up later runs.
+          cache: pip
+          cache-dependency-path: |
+            backend/requirements.txt
+            backend/requirements-dev.txt
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: python -m pip install -r requirements-dev.txt
+
+      # Generate a fresh secret rather than hardcoding a reusable JWT secret.
+      # GITHUB_ENV makes it available to subsequent steps in this job.
+      - name: Generate test JWT secret
+        shell: bash
+        run: |
+          jwt_secret="$(openssl rand -hex 32)"
+          echo "::add-mask::$jwt_secret"
+          echo "JWT_SECRET=$jwt_secret" >> "$GITHUB_ENV"
+
+      - name: Run backend tests
+        working-directory: backend
+        env:
+          # Connect to the PostgreSQL service exposed on the runner.
+          DATABASE_HOST: 127.0.0.1
+          DATABASE_PORT: 5432
+          DATABASE_USER: hotel_user
+          DATABASE_PASSWORD: hotel_password
+          TEST_DATABASE_NAME: hotel_test
+          # DATABASE_URL is intentionally not set because the application
+          # prioritizes it over the individual database settings.
+        run: pytest
+
+  # Independently verify that the frontend dependencies install and compile.
+  frontend:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          # Match the Node version used in local development and the Docker build.
+          node-version: "24.12"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        # npm ci uses the lockfile for a reproducible CI installation.
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: frontend
+        # No frontend test/lint scripts are currently defined in package.json.
+        run: npm run build
+
+  # Verify both production Docker images can be built.
+  # This job doesn't depend on the test jobs, so all three can run in parallel.
+  docker:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # The backend build context must be the repository root because
+      # its Dockerfile copies files from both backend/ and database/.
+      - name: Build backend image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: backend/Dockerfile
+          target: prod
+          # Build only: do not publish images to a registry from CI.
+          push: false
+          tags: ccd-hms-backend:ci
+
+      # The frontend Docker build context is its own directory.
+      - name: Build frontend image
+        uses: docker/build-push-action@v6
+        with:
+          context: frontend
+          file: frontend/Dockerfile
+          # Vite embeds this API URL at build time.
+          # This value is for local use; deployment builds should supply
+          # the appropriate browser-accessible API URL.
+          push: false
+          build-args: |
+            VITE_API_BASE=http://127.0.0.1:8000/api
+          tags: ccd-hms-frontend:ci

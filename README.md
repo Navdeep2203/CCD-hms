@@ -1,13 +1,17 @@
 # Hotel Management System
+[![CI](https://github.com/Navdeep2203/CCD-hms/actions/workflows/ci.yml/badge.svg)]
+(https://github.com/Navdeep2203/CCD-hms/actions/workflows/ci.yml)
+
 
 A full-stack hotel management web application with role-based access for **admins, managers, staff and guests**.
 It covers rooms and room types, bookings with an approval workflow, check-in and check-out, services, invoicing and
 payments, staff and maintenance management, and reports.
 
 > Built as a Cloud Computing & DevOps course project (School of Computer Engineering, 5th semester).
-> This repository contains the complete application. Docker, CI/CD and cloud deployment are the next phase (see [Roadmap](#roadmap)).
+> The application includes a Docker-based local test environment and a GitHub Actions CI workflow for backend tests, frontend builds, and production Docker image builds. Cloud deployment and CD remain future work (see [Roadmap](#roadmap)).
 
 ---
+
 
 ## Table of contents
 
@@ -18,14 +22,16 @@ payments, staff and maintenance management, and reports.
 5. [Demo accounts](#demo-accounts)
 6. [Configuration](#configuration)
 7. [Running the tests](#running-the-tests)
-8. [How the system behaves](#how-the-system-behaves)
-9. [API overview](#api-overview)
-10. [Project structure](#project-structure)
-11. [Troubleshooting](#troubleshooting)
-12. [Running With Docker](#running-with-docker)
-12. [Security notes](#security-notes)
-13. [Roadmap](#roadmap)
-14. [Authors](#authors)
+8. [Continuous Integration](#continuous-integration)
+9. [How the system behaves](#how-the-system-behaves)
+10. [API overview](#api-overview)
+11. [Project structure](#project-structure)
+12. [Troubleshooting](#troubleshooting)
+13. [Running With Docker](#running-with-docker)
+14. [Security notes](#security-notes)
+15. [Roadmap](#roadmap)
+16. [Authors](#authors)
+
 
 ---
 
@@ -63,7 +69,7 @@ Highlights:
 |---|---|---|
 | Git | any recent | `git --version` |
 | Python | 3.10 or newer (tested on 3.12) | `python --version` |
-| Node.js | 18 or newer (tested on 22) | `node --version` |
+| Node.js | 18 or newer (tested on 24.12) | `node --version` |
 | PostgreSQL | 14 or newer (tested on 16) | `psql --version` |
 
 Docker is not required for the Quick start. It is needed only for Running with Docker
@@ -210,6 +216,27 @@ Frontend production build check:
 cd frontend
 npm run build
 ```
+
+## Continuous Integration
+
+GitHub Actions automatically validates changes through three independent jobs:
+
+| Job | Checks performed |
+|---|---|
+| Backend | Runs `pytest` against a disposable PostgreSQL 16.10 service using Python 3.12 |
+| Frontend | Installs dependencies with `npm ci` and verifies the production build with `npm run build` using Node.js 24.12 |
+| Docker | Builds the production backend and frontend Docker images without publishing them to a container registry |
+
+### When CI runs
+
+- On pushes to `main`.
+- When a pull request targets `main`, including subsequent commits pushed to that pull request.
+
+The backend and frontend jobs cache package downloads to speed up subsequent runs. The backend job generates a fresh JWT secret for testing rather than relying on a hardcoded secret.
+
+The frontend job currently validates dependency installation and compilation; automated frontend tests and linting are not configured.
+
+To inspect results, open the repository on GitHub and select **Actions**.
 
 ## How the system behaves
 
@@ -428,7 +455,8 @@ docker build --build-arg VITE_API_BASE=http://localhost:8000/api -t hms-frontend
 
 Application features are complete. Remaining work for the cloud and DevOps phase:
 - [x] Docker images and a Compose-based local test environment
-- [ ] GitHub Actions CI (tests and build) and CD (automatic deployment)
+- [x] GitHub Actions CI for backend tests, frontend builds, and Docker image builds
+- [ ] CD (automatic deployment)
 - [ ] Managed PostgreSQL, backend and frontend hosting
 - [ ] Cloud object storage for room images, ID documents and invoice PDFs
 - [ ] Structured logging, error tracking and uptime monitoring
