@@ -51,6 +51,3 @@ def test_denied_writes(client, H, method, path, body, denied):
 def test_customer_cannot_create_payment_for_unknown_booking(client, H):
     r = client.post("/api/billing/payments", headers=H("customer"), json={"booking_id": 999999, "method_id": 1, "amount": 10})
     assert r.status_code == 404
-
-def test_ci_failure_demo():
-    assert False, "Intentional CI failure test"
