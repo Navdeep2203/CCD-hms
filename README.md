@@ -63,7 +63,7 @@ Highlights:
 |---|---|---|
 | Git | any recent | `git --version` |
 | Python | 3.10 or newer (tested on 3.12) | `python --version` |
-| Node.js | 18 or newer (tested on 22) | `node --version` |
+| Node.js | 18 or newer (tested on 24.12) | `node --version` |
 | PostgreSQL | 14 or newer (tested on 16) | `psql --version` |
 
 Docker is not required for the Quick start. It is needed only for Running with Docker
