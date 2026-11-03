@@ -58,6 +58,47 @@ export function AuthProvider({ children }) {
     };
   }, [logout]);
 
+  // Fetch the latest profile whenever a session is restored or a user logs in.
+useEffect(() => {
+  const token = session?.token;
+
+  if (!token) return undefined;
+
+  let cancelled = false;
+
+  api
+    .get("/auth/me")
+    .then((freshUser) => {
+      if (cancelled) return;
+
+      setSession((current) => {
+        // Prevent an older request from overwriting a newer session.
+        if (!current || current.token !== token) {
+          return current;
+        }
+
+        const nextSession = {
+          ...current,
+          user: freshUser,
+        };
+
+        localStorage.setItem(
+          STORAGE_KEY,
+          JSON.stringify(nextSession),
+        );
+
+        return nextSession;
+      });
+    })
+    .catch((error) => {
+      console.error("Failed to refresh user profile:", error);
+    });
+
+  return () => {
+    cancelled = true;
+  };
+}, [session?.token]);
+
   const login = useCallback((data) => {
     const token = data?.access_token || "";
     const nextSession = {

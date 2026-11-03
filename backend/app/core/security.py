@@ -20,7 +20,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 USER_SQL = """
 SELECT u.user_id, u.email, u.name, u.phone_country_code, u.phone_number, u.is_active,
        u.must_change_password, u.created_at,
-       c.customer_id, c.address, c.id_proof, c.nationality, c.loyalty_points,
+       c.customer_id, c.address, c.id_proof, c.id_proof_key, c.nationality, c.loyalty_points,
        s.staff_id, m.manager_id,
        COALESCE((SELECT array_agg(r.role_name ORDER BY r.role_name)
                  FROM user_roles ur JOIN roles r ON r.role_id = ur.role_id

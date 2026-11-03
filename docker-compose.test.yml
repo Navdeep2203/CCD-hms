@@ -5,6 +5,9 @@
 # Alternatively, set COMPOSE_FILE in .env to load both files automatically.
 
 services:
+  db:
+    ports:
+       - "127.0.0.1:5433:5432"
   backend:
     restart: "no"
     ports:

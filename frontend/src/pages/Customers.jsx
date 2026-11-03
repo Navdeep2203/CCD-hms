@@ -194,7 +194,55 @@ export default function Customers() {
                   {
                     key: "id_proof",
                     label: "ID proof",
-                    render: (row) => row.id_proof || "—",
+                    render: (row) => {
+                      const url = row.id_proof_url;
+                      const isPdf = url
+                        ? url.toLowerCase().split("?")[0].endsWith(".pdf")
+                        : false;
+
+                      return (
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "10px",
+                          }}
+                        >
+                          <span>{row.id_proof || "—"}</span>
+
+                          {url && (
+                            isPdf ? (
+                              <a
+                                href={url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                View PDF
+                              </a>
+                            ) : (
+                              <a
+                                href={url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                title="View customer ID proof"
+                              >
+                                <img
+                                  src={url}
+                                  alt="Customer ID proof"
+                                  style={{
+                                    width: "65px",
+                                    height: "45px",
+                                    objectFit: "cover",
+                                    borderRadius: "6px",
+                                    border: "1px solid #ddd",
+                                  }}
+                                />
+                              </a>
+                            )
+                          )}
+                        </div>
+                      );
+                    },
                   },
                 ]
               : []),

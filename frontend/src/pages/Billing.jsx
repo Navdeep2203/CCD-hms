@@ -26,6 +26,7 @@ export default function Billing() {
   const [search, setSearch] = useState("");
   const [appliedSearch, setAppliedSearch] = useState("");
   const [selectedInvoice, setSelectedInvoice] = useState(null);
+  const [downloadingBookingId, setDownloadingBookingId] = useState(null);
   const [details, setDetails] = useState(null);
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [detailsError, setDetailsError] = useState("");
@@ -82,6 +83,47 @@ export default function Billing() {
       return result;
     },
   );
+
+  async function handleDownloadPdf(invoice) {
+    // Open the tab immediately during the click event.
+    // This avoids browser popup blockers during the API request.
+    const pdfWindow = window.open("about:blank", "_blank");
+
+    if (!pdfWindow) {
+      notify("Please allow pop-ups to download the invoice PDF.", "error");
+      return;
+    }
+
+    pdfWindow.opener = null;
+
+    setDownloadingBookingId(invoice.booking_id);
+
+    try {
+      const result = await api.post(
+        `/billing/invoices/${invoice.booking_id}/pdf`,
+        {},
+      );
+
+      if (!result?.pdf_url) {
+        throw new Error("Invoice PDF download URL was not returned");
+      }
+
+      // Navigate the already-opened tab to the signed URL.
+      pdfWindow.location.replace(result.pdf_url);
+
+      notify("Invoice PDF is ready", "success");
+    } catch (err) {
+      pdfWindow.close();
+
+      notify(
+        err?.message || "Unable to download invoice PDF",
+        "error",
+      );
+    } finally {
+      setDownloadingBookingId(null);
+    }
+  }
+
 
   const { run: createPayment, busy: paymentBusy } = useAction(async () => {
     const amount = Number(paymentForm.amount);
@@ -264,6 +306,15 @@ export default function Billing() {
             <div className="rowActions">
               <button type="button" onClick={() => loadDetails(row)}>
                 View
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDownloadPdf(row)}
+                disabled={downloadingBookingId === row.booking_id}
+              >
+                {downloadingBookingId === row.booking_id
+                  ? "Preparing PDF..."
+                  : "Download PDF"}
               </button>
               {Number(row.balance_due || 0) > 0 && (
                 <button

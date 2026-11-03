@@ -16,12 +16,15 @@ os.environ.setdefault("DATABASE_PASSWORD", "hotel_password")
 
 import psycopg
 import pytest
+from unittest.mock import patch
 from fastapi.testclient import TestClient
 
-from app import migrate
+from app import migrate, storage
 from app.database import _conninfo
 from app.main import app
 from app.routers import auth as auth_router
+
+from .fake_storage import FakeStorage
 
 CREDENTIALS = {
     "admin": ("admin@hotel.com", "Admin@2026"),
@@ -39,7 +42,23 @@ def _reset_database() -> None:
 
 
 @pytest.fixture(scope="module")
-def client():
+def fake_storage():
+    """Use in-memory storage instead of real Supabase during tests."""
+    fake = FakeStorage()
+
+    with (
+        patch.object(storage, "enabled", fake.enabled),
+        patch.object(storage, "save", fake.save),
+        patch.object(storage, "signed_url", fake.signed_url),
+        patch.object(storage, "signed_urls", fake.signed_urls),
+        patch.object(storage, "delete", fake.delete),
+        patch.object(storage, "attach", fake.attach),
+        patch.object(storage, "attach_many", fake.attach_many),
+    ):
+        yield fake
+
+@pytest.fixture(scope="module")
+def client(fake_storage):
     _reset_database()
     auth_router._attempts.clear()
     with TestClient(app) as test_client:

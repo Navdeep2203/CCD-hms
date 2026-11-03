@@ -32,6 +32,18 @@ services:
       DATABASE_USER: ${DATABASE_USER:?Missing database user}
       DATABASE_PASSWORD: ${DATABASE_PASSWORD:?Missing database password}
       JWT_SECRET: ${JWT_SECRET:?Missing JWT secret}
+
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
+
+      SUPABASE_URL: ${SUPABASE_URL:-}
+
+      SUPABASE_SERVICE_KEY: ${SUPABASE_SERVICE_KEY:-}
+      SUPABASE_BUCKET: ${SUPABASE_BUCKET:-hotel-files}
+      UPLOAD_MAX_BYTES: ${UPLOAD_MAX_BYTES:-5242880}
+
+    ports:
+       - "127.0.0.1:8000:8000"
+
     depends_on:
       db:
         condition: service_healthy

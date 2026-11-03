@@ -1,7 +1,9 @@
 from decimal import ROUND_HALF_UP
+from app import storage
+from app.invoice_pdf import build_invoice_pdf
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-
+from app import storage
 from app.billing_logic import BILLABLE_STATUSES, D, ensure_invoice
 from app.core.audit import audit
 from app.core.config import settings
@@ -19,7 +21,7 @@ router = APIRouter()
 
 INVOICE_SELECT = """
 SELECT i.invoice_id, i.booking_id, i.total_amount, i.tax, (i.total_amount + i.tax) AS grand_total,
-       i.generated_date, u.name AS customer_name, r.room_number, b.check_in_date, b.check_out_date,
+       i.generated_date, i.pdf_key, u.name AS customer_name, r.room_number, b.check_in_date, b.check_out_date,
        b.booking_status, COALESCE(paid.amount_paid, 0) AS amount_paid,
        (i.total_amount + i.tax - COALESCE(paid.amount_paid, 0)) AS balance_due,
        CASE WHEN COALESCE(paid.amount_paid, 0) >= i.total_amount + i.tax THEN 'PAID'
@@ -56,7 +58,16 @@ def list_invoices(
         where.append("(u.name ILIKE :q OR CAST(r.room_number AS TEXT) ILIKE :q OR CAST(i.invoice_id AS TEXT) = :exact)")
         params.update({"q": f"%{search}%", "exact": search})
     sql = INVOICE_SELECT + (" WHERE " + " AND ".join(where) if where else "")
-    return fetch_all(sql + " ORDER BY i.invoice_id DESC LIMIT :limit OFFSET :offset", params)
+    rows = fetch_all(
+    sql + " ORDER BY i.invoice_id DESC LIMIT :limit OFFSET :offset",
+    params,
+)
+
+    return storage.attach_many(
+        rows,
+        "pdf_key",
+        "pdf_url",
+    )
 
 
 @router.post("/invoices/{booking_id}/generate")
@@ -64,10 +75,211 @@ def generate_invoice(booking_id: int, user: dict = Depends(get_current_user)) ->
     """Create the invoice, or recalculate it so late-added services are included."""
     with transaction() as conn:
         booking = _booking_for(booking_id, user, conn)
+
         if booking["booking_status"] not in BILLABLE_STATUSES:
-            raise HTTPException(status.HTTP_409_CONFLICT, "An invoice can only be created once the guest has checked in")
+            raise HTTPException(
+                status.HTTP_409_CONFLICT,
+                "An invoice can only be created once the guest has checked in",
+            )
+
         ensure_invoice(booking_id, conn)
-        return fetch_one(INVOICE_SELECT + " WHERE i.booking_id = :id", {"id": booking_id}, conn=conn)
+
+        row = fetch_one(
+            INVOICE_SELECT + " WHERE i.booking_id = :id",
+            {"id": booking_id},
+            conn=conn,
+        )
+
+    return storage.attach(
+        row,
+        "pdf_key",
+        "pdf_url",
+    )
+
+
+@router.post("/invoices/{booking_id}/pdf")
+def generate_invoice_pdf(
+    booking_id: int,
+    user: dict = Depends(get_current_user),
+) -> dict:
+    """
+    Generate an invoice PDF, upload it to Supabase,
+    and return a temporary signed download URL.
+    """
+
+    # 1. Verify storage configuration.
+    if not storage.enabled():
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            "Invoice PDF storage is not configured",
+        )
+
+    # 2. Read invoice information and service lines.
+    # Lock the booking to avoid concurrent PDF generation
+    # racing with another invoice operation.
+    with transaction() as conn:
+
+        fetch_one(
+            "SELECT booking_id FROM bookings WHERE booking_id = :id FOR UPDATE",
+            {"id": booking_id},
+            conn=conn,
+        )
+
+        booking = _booking_for(booking_id, user, conn)
+
+        if booking["booking_status"] not in BILLABLE_STATUSES:
+            raise HTTPException(
+                status.HTTP_409_CONFLICT,
+                "An invoice can only be generated once the guest has checked in",
+            )
+
+        # Reuse the existing billing calculations.
+        ensure_invoice(booking_id, conn)
+
+        invoice = fetch_one(
+            INVOICE_SELECT + " WHERE i.booking_id = :id",
+            {"id": booking_id},
+            conn=conn,
+        )
+
+        if not invoice:
+            raise HTTPException(
+                status.HTTP_500_INTERNAL_SERVER_ERROR,
+                "Unable to retrieve generated invoice",
+            )
+
+        service_lines = fetch_all(
+            """
+            SELECT s.service_name, su.quantity, su.total_price
+            FROM service_usage su
+            JOIN services s ON s.service_id = su.service_id
+            WHERE su.booking_id = :booking_id
+            ORDER BY su.usage_id
+            """,
+            {"booking_id": booking_id},
+            conn=conn,
+        )
+
+        invoice_id = invoice["invoice_id"]
+        old_key = invoice.get("pdf_key")
+
+    # 3. Build the PDF after the database transaction closes.
+    try:
+        pdf_bytes = build_invoice_pdf(
+            invoice,
+            service_lines,
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status.HTTP_500_INTERNAL_SERVER_ERROR,
+            "Unable to generate invoice PDF",
+        ) from exc
+
+    # 4. Upload to Supabase.
+    pdf_key = f"invoice_pdf/{invoice_id}.pdf"
+
+    try:
+        saved_key = storage.save(
+            pdf_key,
+            pdf_bytes,
+            "application/pdf",
+            upsert=True,
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status.HTTP_502_BAD_GATEWAY,
+            "Unable to upload invoice PDF to storage",
+        ) from exc
+
+    # 5. Update the invoice's database reference.
+    try:
+        with transaction() as conn:
+
+            existing = fetch_one(
+                """
+                SELECT invoice_id
+                FROM invoices
+                WHERE invoice_id = :invoice_id
+                FOR UPDATE
+                """,
+                {"invoice_id": invoice_id},
+                conn=conn,
+            )
+
+            if not existing:
+                raise HTTPException(
+                    status.HTTP_404_NOT_FOUND,
+                    "Invoice no longer exists",
+                )
+
+            execute(
+                """
+                UPDATE invoices
+                SET pdf_key = :pdf_key
+                WHERE invoice_id = :invoice_id
+                """,
+                {
+                    "pdf_key": saved_key,
+                    "invoice_id": invoice_id,
+                },
+                conn=conn,
+            )
+
+    except Exception:
+        # Don't delete an object already referenced by
+        # the existing invoice.
+        if saved_key != old_key:
+            try:
+                storage.delete(saved_key)
+            except Exception:
+                # Cleanup can be retried later.
+                pass
+
+        raise
+
+    # 6. Remove the previous object if its key changed.
+    cleanup_pending = False
+
+    if old_key and old_key != saved_key:
+        try:
+            storage.delete(old_key)
+        except Exception:
+            cleanup_pending = True
+
+    # 7. Generate a signed URL for the frontend.
+    try:
+        pdf_url = storage.signed_url(
+            saved_key,
+            expires_in=3600,
+        )
+
+        if not pdf_url:
+            raise RuntimeError("Signed URL was not returned")
+
+    except Exception as exc:
+        raise HTTPException(
+            status.HTTP_502_BAD_GATEWAY,
+            "Invoice was stored, but its download link could not be generated",
+        ) from exc
+
+    # 8. Record the sensitive operation.
+    audit(
+        user["user_id"],
+        "invoice_pdf_generated",
+        invoice_id=invoice_id,
+        booking_id=booking_id,
+        cleanup_pending=cleanup_pending,
+    )
+
+    # 9. Return only the signed URL, never the raw storage key.
+    return {
+        "invoice_id": invoice_id,
+        "booking_id": booking_id,
+        "filename": f"invoice-{invoice_id}.pdf",
+        "content_type": "application/pdf",
+        "pdf_url": pdf_url,
+        "cleanup_pending": cleanup_pending,
+    }
 
 
 @router.get("/methods")

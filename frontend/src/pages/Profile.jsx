@@ -6,6 +6,7 @@ import { useAction } from "../hooks/useAction";
 import { useToast } from "../components/Toast";
 import Modal from "../components/Modal";
 import PageHeader from "../components/PageHeader";
+import FileUpload from "../components/FileUpload";
 
 const EMPTY_PROFILE = {
   name: "",
@@ -230,6 +231,17 @@ export default function Profile() {
                   }
                 />
               </label>
+
+              <FileUpload
+                purpose="id_proof"
+                recordId={user.customer_id}
+                value={user.id_proof_url || null}
+                label="Upload identity document"
+                helperText="Upload your identity document (JPEG, PNG, WebP or PDF). Maximum size: 5 MB."
+                onUploaded={refreshUser}
+                onRemoved={refreshUser}
+                allowRemove={true}
+              />
 
               <label>
                 Nationality

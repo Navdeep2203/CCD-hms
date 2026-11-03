@@ -3,6 +3,7 @@ from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.core.audit import audit
+from app import storage
 from app.core.config import settings
 from app.core.security import (
     CUSTOMER,
@@ -24,6 +25,17 @@ from app.schemas import (
 )
 
 router = APIRouter()
+
+def _profile_response(user: dict) -> dict:
+    """Build the profile response with a signed ID-proof URL for customers."""
+    result = public_user(user)
+
+    if user.get("customer_id"):
+        result["id_proof_url"] = storage.signed_url(
+            user.get("id_proof_key")
+        )
+
+    return result
 
 # Simple in-memory brute-force protection (per email). Use Redis or similar if you run several instances.
 _attempts: dict[str, dict] = {}
@@ -68,7 +80,7 @@ def login(payload: LoginRequest) -> TokenResponse:
 
 @router.get("/me")
 def me(user: dict = Depends(get_user_allow_password_change)) -> dict:
-    return public_user(user)
+    return _profile_response(user)
 
 
 @router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
@@ -131,4 +143,4 @@ def update_profile(payload: ProfileUpdateRequest, user: dict = Depends(get_user_
         cust_set, cust_params = build_set({k: (data[k] or "") for k in customer_fields}, customer_fields)
         if cust_set:
             execute(f"UPDATE customers SET {cust_set} WHERE user_id = :uid", {**cust_params, "uid": user["user_id"]}, conn=conn)
-    return public_user(load_user(user["user_id"]))
+    return _profile_response(load_user(user["user_id"]))
