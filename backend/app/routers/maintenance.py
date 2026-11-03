@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-
+from app import storage
 from app.core.audit import audit
 from app.core.security import ADMIN, MANAGER, STAFF, is_management, require_roles
 from app.core.sqlutil import build_set
@@ -17,7 +17,7 @@ ops_user = Depends(require_roles(ADMIN, MANAGER, STAFF))
 
 MAINT_SELECT = """
 SELECT rm.maintenance_id, rm.room_id, r.room_number, rm.staff_id, u.name AS staff_name,
-       rm.description, rm.maintenance_date, rm.status
+       rm.description, rm.maintenance_date, rm.status, rm.photo_key
 FROM room_maintenance rm
 JOIN rooms r ON r.room_id = rm.room_id
 LEFT JOIN staff s ON s.staff_id = rm.staff_id
@@ -46,7 +46,16 @@ def list_maintenance(
         where.append("rm.status = :status")
         params["status"] = status_filter
     sql = MAINT_SELECT + (" WHERE " + " AND ".join(where) if where else "")
-    return fetch_all(sql + " ORDER BY rm.maintenance_id DESC LIMIT 200", params)
+    rows = fetch_all(
+    sql + " ORDER BY rm.maintenance_id DESC LIMIT 200",
+    params,
+)
+
+    return storage.attach_many(
+        rows,
+        "photo_key",
+        "photo_url",
+    )
 
 
 @router.post("", status_code=201)
@@ -64,8 +73,24 @@ def create_request(payload: MaintenanceCreateRequest, user: dict = ops_user) -> 
         )
         if not _occupied(payload.room_id, conn):  # never pull a room from a guest who is in it
             execute("UPDATE rooms SET status = 'MAINTENANCE' WHERE room_id = :id", {"id": payload.room_id}, conn=conn)
-        audit(user["user_id"], "maintenance_created", maintenance_id=maint_id, room_id=payload.room_id)
-        return fetch_one(MAINT_SELECT + " WHERE rm.maintenance_id = :id", {"id": maint_id}, conn=conn)
+        audit(
+            user["user_id"],
+            "maintenance_created",
+            maintenance_id=maint_id,
+            room_id=payload.room_id,
+        )
+
+        result = fetch_one(
+            MAINT_SELECT + " WHERE rm.maintenance_id = :id",
+            {"id": maint_id},
+            conn=conn,
+        )
+
+    return storage.attach(
+        result,
+        "photo_key",
+        "photo_url",
+    )
 
 
 @router.put("/{maintenance_id}")
@@ -99,5 +124,21 @@ def update_request(maintenance_id: int, payload: MaintenanceUpdateRequest, user:
                 execute("UPDATE rooms SET status = 'AVAILABLE' WHERE room_id = :id AND status = 'MAINTENANCE'", {"id": room_id}, conn=conn)
         elif data.get("status") in ("PENDING", "IN_PROGRESS") and not _occupied(room_id, conn):
             execute("UPDATE rooms SET status = 'MAINTENANCE' WHERE room_id = :id", {"id": room_id}, conn=conn)
-        audit(user["user_id"], "maintenance_updated", maintenance_id=maintenance_id, fields=",".join(sorted(data)))
-        return fetch_one(MAINT_SELECT + " WHERE rm.maintenance_id = :id", {"id": maintenance_id}, conn=conn)
+        audit(
+            user["user_id"],
+            "maintenance_updated",
+            maintenance_id=maintenance_id,
+            fields=",".join(sorted(data)),
+        )
+
+        result = fetch_one(
+            MAINT_SELECT + " WHERE rm.maintenance_id = :id",
+            {"id": maintenance_id},
+            conn=conn,
+        )
+
+    return storage.attach(
+        result,
+        "photo_key",
+        "photo_url",
+    )

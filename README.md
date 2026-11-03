@@ -28,9 +28,10 @@ payments, staff and maintenance management, and reports.
 11. [Project structure](#project-structure)
 12. [Troubleshooting](#troubleshooting)
 13. [Running With Docker](#running-with-docker)
-14. [Security notes](#security-notes)
-15. [Roadmap](#roadmap)
-16. [Authors](#authors)
+14. [Supabase Storage](#supabase-storage)
+15. [Security notes](#security-notes)
+16. [Roadmap](#roadmap)
+17. [Authors](#authors)
 
 
 ---
@@ -190,6 +191,10 @@ All backend settings are environment variables, read from `backend/.env` (real e
 | `TAX_RATE` | `0.12` | Tax added to invoices (12%) |
 | `LOYALTY_UNIT` | `100` | One loyalty point per this much paid |
 | `CORS_ORIGINS` | localhost and 127.0.0.1 on port 5173 | Comma-separated list of allowed frontend origins |
+| `SUPABASE_URL` | no, unless storage is enabled | Supabase project URL |
+| `SUPABASE_SERVICE_KEY` | no, unless storage is enabled | **Secret.** Server-side Supabase access key. Never expose to the frontend |
+| `SUPABASE_BUCKET` | no | Storage bucket name. Defaults to `hotel-files` |
+| `UPLOAD_MAX_BYTES` | no | Maximum upload size in bytes. Defaults to `5242880` (5 MB)
 
 Frontend: `VITE_API_BASE` (default `http://127.0.0.1:8000/api`). Vite reads it at **build time**.
 
@@ -382,8 +387,8 @@ To avoid typing the two `-f` flags, set `COMPOSE_FILE` in `.env` (see the table 
 
 | File | Purpose |
 |---|---|
-| `docker-compose.yml` | Shared definition of the three services. Deliberately not runnable on its own: it has no host ports, no CORS origin and no frontend API URL. |
-| `docker-compose.test.yml` | Local test values layered on top: ports bound to `127.0.0.1` only, the browser-facing URLs, and the demo seed. |
+| `docker-compose.yml` | Shared service definitions, backend configuration, localhost API port, CORS default and Supabase environment forwarding. |
+| `docker-compose.test.yml` | Local test overrides: frontend and backend host ports, database test port, browser-facing URLs, CORS origin and optional demo seeding. |
 | `backend/Dockerfile` | Backend image. Build it from the **repository root**, because it copies `database/migrations/`, which lives outside `backend/`. Stages: `base` (dependencies) and `prod` (the image that runs). |
 | `backend/entrypoint.sh` | Container start script: applies database migrations, then starts the API server. With `--seed` it also loads demo data. Any other argument is run as a command. |
 | `frontend/Dockerfile` | Frontend image. Stage one builds with Node, stage two serves the static files with unprivileged nginx. Build context is `frontend/`. |
@@ -409,6 +414,7 @@ docker build --build-arg VITE_API_BASE=http://localhost:8000/api -t hms-frontend
 | `FRONTEND_PORT` | yes | Host port for the frontend; also used to build the allowed CORS origin |
 | `BACKEND_PORT` | yes | Host port for the API; also baked into the frontend as its API URL |
 | `COMPOSE_FILE` | no | Loads both Compose files automatically. Separator is `:` on Linux, macOS and WSL, `;` on native Windows |
+
 
 **Set by the Compose files** (not in `.env`):
 
@@ -445,6 +451,113 @@ docker build --build-arg VITE_API_BASE=http://localhost:8000/api -t hms-frontend
 | `port is already allocated` | Change `FRONTEND_PORT` or `BACKEND_PORT` in `.env`. |
 
 ## Security notes
+- Keep the Supabase bucket private. Do not expose the service key in frontend code or public environment variables.
+- Customer identity documents and other stored files are accessed through backend authorization and signed URLs.
+- Do not commit Supabase credentials. Use the example environment files for documentation and configuration templates.
+
+## Supabase Storage
+
+The application uses Supabase Storage for private file storage. Files are uploaded through the FastAPI backend, while the frontend receives signed URLs for authorized viewing.
+
+### Supabase project setup
+
+1. Create a project in [Supabase](https://supabase.com/).
+2. Open **Storage** in the Supabase Dashboard.
+3. Create a bucket named `hotel-files`.
+4. Keep the bucket **Private**. Do not enable public access.
+5. Configure the bucket with a maximum file size of 5 MB.
+6. Allow these MIME types:
+   - `image/jpeg`
+   - `image/png`
+   - `image/webp`
+   - `application/pdf`
+
+Obtain the Project URL and server-side secret key from your Supabase project settings.
+
+### Environment configuration
+
+For Docker-based local development, add these values to the root `.env` file:
+
+```dotenv
+SUPABASE_URL=https://your-project-ref.supabase.co
+SUPABASE_SERVICE_KEY=your-server-side-secret-key
+SUPABASE_BUCKET=hotel-files
+UPLOAD_MAX_BYTES=5242880
+```
+
+For running the backend directly without Docker, configure the same variables in `backend/.env`.
+
+The corresponding example files are `.env.example` and `backend/.env.example`.
+
+**Security requirements:**
+
+- Never commit `.env` or `backend/.env`.
+- Never expose `SUPABASE_SERVICE_KEY` through frontend environment variables or browser code.
+- Do not make the storage bucket public.
+- All file access should go through backend authorization and signed URLs.
+
+### Database migration
+
+The storage integration adds migration:
+
+`database/migrations/003_file_storage.sql`
+
+It adds nullable storage-key columns:
+
+| Table | Column | Purpose |
+|---|---|---|
+| `room_types` | `image_key` | Room type images |
+| `customers` | `id_proof_key` | Customer identity documents |
+| `room_maintenance` | `photo_key` | Maintenance photographs |
+| `invoices` | `pdf_key` | Generated invoice PDFs |
+
+The existing migration system applies this migration when the backend starts. The application stores object keys in PostgreSQL rather than permanent public URLs.
+
+### Supported storage features
+
+| Feature | Supported files | Access |
+|---|---|---|
+| Room images | JPEG, PNG, WebP | Admin and Manager |
+| Customer ID proof | JPEG, PNG, WebP, PDF | Customer's own document, Admin and Manager |
+| Maintenance photos | JPEG, PNG, WebP | Management and assigned staff |
+| Invoice PDFs | PDF, generated by backend | Authorized billing users |
+
+The default maximum upload size is 5 MB. The backend validates file size, MIME type and file signatures.
+
+The frontend provides a reusable `FileUpload` component for uploading, previewing, replacing and removing files.
+
+### API endpoints
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| POST | `/api/uploads/{purpose}/{record_id}` | Upload or replace a file |
+| DELETE | `/api/uploads/{purpose}/{record_id}` | Remove an uploaded file |
+| POST | `/api/billing/invoices/{booking_id}/pdf` | Generate and store an invoice PDF |
+
+Supported upload purposes are `room_image`, `id_proof` and `maintenance_photo`.
+
+The backend checks user permissions before allowing uploads, downloads or deletion. It generates signed URLs for authorized file access and does not expose raw storage keys in API responses.
+
+### Local Docker deployment
+
+The root `.env` file supplies Supabase configuration to the backend container through Docker Compose.
+
+After changing Supabase environment variables, recreate the backend container:
+
+```bash
+docker compose up -d --no-deps --force-recreate backend
+```
+
+For changes to the backend image or dependencies, rebuild it:
+
+```bash
+docker compose up -d --build --no-deps backend
+```
+
+Verify backend health at:
+
+`http://localhost:8000/api/health/ready`
+
 
 - Never commit `.env` files or database dumps. The repository's `.gitignore` excludes them; keep it that way.
 - The demo passwords are public. Do not load `seed_demo.sql` into a real deployment, and create real admin accounts instead.
@@ -458,7 +571,7 @@ Application features are complete. Remaining work for the cloud and DevOps phase
 - [x] GitHub Actions CI for backend tests, frontend builds, and Docker image builds
 - [ ] CD (automatic deployment)
 - [ ] Managed PostgreSQL, backend and frontend hosting
-- [ ] Cloud object storage for room images, ID documents and invoice PDFs
+- [x] Cloud object storage for room images, ID documents and invoice PDFs (Supabase Storage)
 - [ ] Structured logging, error tracking and uptime monitoring
 - [ ] Optional email notifications
 

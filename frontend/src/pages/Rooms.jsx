@@ -19,6 +19,7 @@ import PageState from "../components/PageState";
 import Modal from "../components/Modal";
 
 import ConfirmDialog from "../components/ConfirmDialog";
+import FileUpload from "../components/FileUpload";
 
 import Tabs from "../components/Tabs";
 import PageHeader from "../components/PageHeader";
@@ -445,12 +446,26 @@ export default function Rooms() {
               const total = nightly * nights;
 
               return (
-                <article
-                  className="roomCard"
+            <article
+              className="roomCard"
+              key={room.room_id}
+            >
+              <div className="roomCardImage">
+                {room.image_url ? (
+                  <img
+                    src={room.image_url}
+                    alt={`${room.type_name} room`}
+                    className="roomImage"
+                    loading="lazy"
+                  />
+                ) : (
+                  <div className="roomImagePlaceholder">
+                    <span>No room image available</span>
+                  </div>
+                )}
+              </div>
 
-                  key={room.room_id}
-                >
-                  <div className="roomCardTop">
+              <div className="roomCardTop">
                     <div>
                       <p className="eyebrow">{room.type_name}</p>
 
@@ -717,6 +732,24 @@ export default function Rooms() {
                 {
                   key: "type_name",
                   label: "Name",
+                },
+
+                {
+                  key: "image_url",
+                  label: "Image",
+                  render: (row) =>
+                    row.image_url ? (
+                      <img
+                        src={row.image_url}
+                        alt={`${row.type_name} room`}
+                        className="thumb"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <span className="thumbPlaceholder">
+                        No image
+                      </span>
+                    ),
                 },
                 {
                   key: "capacity",
@@ -1040,6 +1073,34 @@ export default function Rooms() {
                   }
                 />
               </label>
+              {roomTypeMode === "edit" && editingRoomTypeId && (
+                <FileUpload
+                  purpose="room_image"
+                  recordId={editingRoomTypeId}
+                  value={
+                    typeRows.find(
+                      (type) => type.room_type_id === editingRoomTypeId
+                    )?.image_url || null
+                  }
+                  label="Room type image"
+                  helperText="Upload a JPEG, PNG or WebP image. Maximum size: 5 MB."
+                  onUploaded={() => {
+                    reloadRoomTypes();
+                    reload();
+                  }}
+                  onRemoved={() => {
+                    reloadRoomTypes();
+                    reload();
+                  }}
+                />
+              )}
+
+              {roomTypeMode === "add" && (
+                <p className="fieldHint">
+                  Save the room type first. You can upload its image when editing it.
+                </p>
+              )}
+
 
               <div className="formActions">
                 <button

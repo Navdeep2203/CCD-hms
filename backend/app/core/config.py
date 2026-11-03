@@ -50,7 +50,23 @@ class Settings:
     tax_rate: Decimal = _decimal("TAX_RATE", "0.12")
     loyalty_unit: int = _int("LOYALTY_UNIT", 100)
 
+    # Supabase Storage configuration
+    supabase_url: str = os.getenv("SUPABASE_URL", "").strip()
+    supabase_service_key: str = os.getenv("SUPABASE_SERVICE_KEY", "").strip()
+    supabase_bucket: str = os.getenv("SUPABASE_BUCKET", "hotel-files").strip()
+
+    # Maximum file upload size: 5 MB
+    upload_max_bytes: int = _int("UPLOAD_MAX_BYTES", 5242880)
+
     cors_origins: list[str] = None
+
+    @property
+    def storage_enabled(self) -> bool:
+        return bool(
+            self.supabase_url
+            and self.supabase_service_key
+            and self.supabase_bucket
+        )
 
     def __post_init__(self):
         if self.cors_origins is None:

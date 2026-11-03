@@ -12,6 +12,7 @@ import Modal from "../components/Modal";
 import PageHeader from "../components/PageHeader";
 import Toolbar from "../components/Toolbar";
 import { fmtDate } from "../utils/format";
+import FileUpload from "../components/FileUpload";
 
 const EMPTY_FORM = {
   room_id: "",
@@ -30,6 +31,8 @@ export default function Maintenance() {
   const { notify } = useToast();
 
   const isManagement = hasRole("ROLE_ADMIN") || hasRole("ROLE_MANAGER");
+  const canManagePhotos =
+  isManagement || hasRole("ROLE_STAFF");
 
   const {
     data: maintenance,
@@ -212,6 +215,31 @@ export default function Maintenance() {
               label: "Room",
               render: (row) => `Room ${row.room_number}`,
             },
+
+            {
+              key: "photo_url",
+              label: "Photo",
+              render: (row) =>
+                row.photo_url ? (
+                  <a
+                    href={row.photo_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title="View maintenance photo"
+                  >
+                    <img
+                      src={row.photo_url}
+                      alt={`Maintenance for room ${row.room_number}`}
+                      className="thumb"
+                      loading="lazy"
+                    />
+                  </a>
+                ) : (
+                  <span className="thumbPlaceholder">
+                    No photo
+                  </span>
+                ),
+            },
             {
               key: "description",
               label: "Issue",
@@ -236,6 +264,19 @@ export default function Maintenance() {
           ]}
           actions={(row) => (
             <div className="rowActions">
+
+              {canManagePhotos && (
+                <FileUpload
+                  purpose="maintenance_photo"
+                  recordId={row.maintenance_id}
+                  value={row.photo_url || null}
+                  label="Task photo"
+                  maxBytes={5242880}
+                  onUploaded={() => reload()}
+                  onRemoved={() => reload()}
+                  allowRemove={true}
+                />
+              )}
               {row.status === "PENDING" && (
                 <button
                   type="button"

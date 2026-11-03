@@ -22,6 +22,7 @@ from app.routers import (
     rooms,
     services,
     staff,
+    uploads,
 )
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
@@ -94,6 +95,6 @@ for module, prefix in (
     (auth, "auth"), (dashboard, "dashboard"), (rooms, "rooms"), (bookings, "bookings"),
     (billing, "billing"), (services, "services"), (staff, "staff"), (managers, "managers"),
     (customers, "customers"), (departments, "departments"), (maintenance, "maintenance"),
-    (reports, "reports"),
+    (reports, "reports"),(uploads, "uploads"),
 ):
     app.include_router(module.router, prefix=f"/api/{prefix}", tags=[prefix])

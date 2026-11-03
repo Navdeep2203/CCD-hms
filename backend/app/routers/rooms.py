@@ -2,6 +2,8 @@ from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
+from app import storage
+
 from app.core.audit import audit
 from app.core.security import (
     ADMIN,
@@ -25,16 +27,25 @@ management = Depends(require_roles(ADMIN, MANAGER))
 
 ROOM_SELECT = """
 SELECT r.room_id, r.room_number, r.floor, r.status,
-       rt.room_type_id, rt.type_name, rt.capacity, rt.price_per_night, rt.description
+       rt.room_type_id, rt.type_name, rt.capacity,
+       rt.price_per_night, rt.description, rt.image_key
 FROM rooms r
 JOIN room_types rt ON rt.room_type_id = r.room_type_id
 """
-# Guests only ever see what they need to choose and book a room (no internal status).
+
+# Guests only ever see what they need to choose and book a room.
 GUEST_ROOM_SELECT = """
 SELECT r.room_id, r.room_number, r.floor,
-       rt.room_type_id, rt.type_name, rt.capacity, rt.price_per_night, rt.description
+       rt.room_type_id, rt.type_name, rt.capacity,
+       rt.price_per_night, rt.description, rt.image_key
 FROM rooms r
 JOIN room_types rt ON rt.room_type_id = r.room_type_id
+"""
+
+ROOM_TYPE_SELECT = """
+SELECT room_type_id, type_name, capacity,
+       price_per_night, description, image_key
+FROM room_types
 """
 ACTIVE_STAY = "('CHECKED_IN', 'CHECKOUT_PENDING')"
 
@@ -74,12 +85,26 @@ def list_rooms(
         )
         params.update({"check_in": check_in, "check_out": check_out})
     sql = (ROOM_SELECT if ops else GUEST_ROOM_SELECT) + (" WHERE " + " AND ".join(where) if where else "")
-    return fetch_all(sql + " ORDER BY r.room_number", params)
+    rows = fetch_all(sql + " ORDER BY r.room_number", params)
+
+    return storage.attach_many(
+        rows,
+        "image_key",
+        "image_url",
+    )
 
 
 @router.get("/types")
 def list_room_types(user: dict = Depends(get_current_user)) -> list[dict]:
-    return fetch_all("SELECT * FROM room_types ORDER BY price_per_night, type_name")
+    rows = fetch_all(
+        ROOM_TYPE_SELECT + " ORDER BY price_per_night, type_name"
+    )
+
+    return storage.attach_many(
+        rows,
+        "image_key",
+        "image_url",
+    )
 
 
 @router.post("/types", status_code=201, dependencies=[management])
@@ -88,8 +113,15 @@ def create_room_type(payload: RoomTypeRequest) -> dict:
         """INSERT INTO room_types (type_name, capacity, price_per_night, description)
            VALUES (:type_name, :capacity, :price_per_night, :description) RETURNING room_type_id""",
         payload.model_dump(),
+        )
+    return storage.attach(
+        fetch_one(
+            ROOM_TYPE_SELECT + " WHERE room_type_id = :id",
+            {"id": new_id},
+        ),
+        "image_key",
+        "image_url",
     )
-    return fetch_one("SELECT * FROM room_types WHERE room_type_id = :id", {"id": new_id})
 
 
 @router.put("/types/{room_type_id}", dependencies=[management])
@@ -101,7 +133,14 @@ def update_room_type(room_type_id: int, payload: RoomTypeRequest) -> dict:
     )
     if not affected:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Room type not found")
-    return fetch_one("SELECT * FROM room_types WHERE room_type_id = :id", {"id": room_type_id})
+    return storage.attach(
+    fetch_one(
+        ROOM_TYPE_SELECT + " WHERE room_type_id = :id",
+        {"id": room_type_id},
+    ),
+    "image_key",
+    "image_url",
+)
 
 
 @router.delete("/types/{room_type_id}", dependencies=[management])
@@ -120,7 +159,11 @@ def create_room(payload: RoomRequest, user: dict = management) -> dict:
            VALUES (:room_number, :room_type_id, :floor, :status) RETURNING room_id""",
         payload.model_dump(),
     )
-    return fetch_one(ROOM_SELECT + " WHERE r.room_id = :id", {"id": room_id})
+    return storage.attach(
+    fetch_one(ROOM_SELECT + " WHERE r.room_id = :id", {"id": room_id}),
+    "image_key",
+    "image_url",
+)
 
 
 def _guard_status_change(current: str, new: str, room_id: int, conn) -> None:
@@ -145,8 +188,15 @@ def update_room(room_id: int, payload: RoomRequest, user: dict = management) -> 
             {**payload.model_dump(), "id": room_id},
             conn=conn,
         )
-        return fetch_one(ROOM_SELECT + " WHERE r.room_id = :id", {"id": room_id}, conn=conn)
-
+        return storage.attach(
+    fetch_one(
+        ROOM_SELECT + " WHERE r.room_id = :id",
+        {"id": room_id},
+        conn=conn,
+    ),
+    "image_key",
+    "image_url",
+)
 
 @router.patch("/{room_id}/status")
 def update_room_status(
@@ -159,7 +209,15 @@ def update_room_status(
         _guard_status_change(room["status"], payload.status, room_id, conn)
         execute("UPDATE rooms SET status = :status WHERE room_id = :id", {"status": payload.status, "id": room_id}, conn=conn)
         audit(user["user_id"], "room_status", room_id=room_id, status=payload.status)
-        return fetch_one(ROOM_SELECT + " WHERE r.room_id = :id", {"id": room_id}, conn=conn)
+        return storage.attach(
+    fetch_one(
+        ROOM_SELECT + " WHERE r.room_id = :id",
+        {"id": room_id},
+        conn=conn,
+    ),
+    "image_key",
+    "image_url",
+)
 
 
 @router.delete("/{room_id}")

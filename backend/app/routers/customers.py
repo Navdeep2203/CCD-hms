@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-
+from app import storage
 from app.core.audit import audit
 from app.core.security import (
     ADMIN,
@@ -30,18 +30,27 @@ def list_customers(
     user: dict = Depends(require_roles(ADMIN, MANAGER, STAFF)),
 ) -> list[dict]:
     # Front-line staff get just what they need to book a walk-in; ID proof / address are management-only.
-    extra = ", c.address, c.id_proof" if is_management(user) else ""
+    extra = ", c.address, c.id_proof, c.id_proof_key" if is_management(user) else ""
     where, params = "", {"limit": limit, "offset": offset}
     if search:
         where = " WHERE u.name ILIKE :q OR u.email ILIKE :q OR u.phone_number ILIKE :q"
         params["q"] = f"%{search}%"
-    return fetch_all(
-        f"""SELECT c.customer_id, c.user_id, u.name, u.email, u.phone_country_code, u.phone_number,
-                   u.is_active, c.nationality, c.loyalty_points{extra}
-            FROM customers c JOIN users u ON u.user_id = c.user_id{where}
-            ORDER BY c.customer_id DESC LIMIT :limit OFFSET :offset""",
-        params,
-    )
+    rows = fetch_all(
+    f"""SELECT c.customer_id, c.user_id, u.name, u.email, u.phone_country_code, u.phone_number,
+               u.is_active, c.nationality, c.loyalty_points{extra}
+        FROM customers c JOIN users u ON u.user_id = c.user_id{where}
+        ORDER BY c.customer_id DESC LIMIT :limit OFFSET :offset""",
+    params,
+)
+
+    if is_management(user):
+        return storage.attach_many(
+            rows,
+            "id_proof_key",
+            "id_proof_url",
+        )
+
+    return rows
 
 
 @router.post("", status_code=201)
