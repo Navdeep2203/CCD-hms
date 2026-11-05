@@ -7,11 +7,6 @@
 
 BEGIN;
 
-INSERT INTO roles (role_name) VALUES ('ROLE_ADMIN');
-INSERT INTO roles (role_name) VALUES ('ROLE_MANAGER');
-INSERT INTO roles (role_name) VALUES ('ROLE_STAFF');
-INSERT INTO roles (role_name) VALUES ('ROLE_CUSTOMER');
-
 INSERT INTO users (email, password_hash, name, phone_country_code, phone_number)
 VALUES ('admin@hotel.com', '$2b$12$mXxwVpbM7NnLDzwUF7BqpOpp8/YSIh/v2b4wvJ.JolzdgfF7ceS9.', 'System Admin', '+91', '9000000001');
 
