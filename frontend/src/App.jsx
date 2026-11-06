@@ -29,12 +29,6 @@ import MaintenancePage from "./pages/Maintenance";
 import ReportsPage from "./pages/Reports";
 import ProfilePage from "./pages/Profile";
 
-const DEMO_ACCOUNTS = [
-  { role: "Admin", email: "admin@hotel.com", pass: "Admin@2026", badge: "Superuser" },
-  { role: "Manager", email: "manager@hotel.com", pass: "Manager@2026", badge: "Operations" },
-  { role: "Staff", email: "staff@hotel.com", pass: "Staff@2026", badge: "Front Desk" },
-  { role: "Guest", email: "customer@hotel.com", pass: "Guest@2026", badge: "Customer" },
-];
 
 function Login() {
   const { login } = useAuth();
@@ -81,15 +75,7 @@ function Login() {
     }
   }
 
-  function fillDemo(d) {
-    setForm((prev) => ({
-      ...prev,
-      email: d.email,
-      password: d.pass,
-    }));
-    setError("");
-    if (mode !== "login") setMode("login");
-  }
+
 
   return (
     <main className="authPage">
@@ -168,30 +154,11 @@ function Login() {
             <h2>{mode === "login" ? "Portal Sign In" : "Create Guest Account"}</h2>
             <p className="authSubtext">
               {mode === "login"
-                ? "Enter your credentials or click a demo profile below to enter the portal."
+                ? "Sign in using your registered account credentials."
                 : "Create an account to book luxury suites, order services, and track bills."}
             </p>
           </div>
 
-          {mode === "login" && (
-            <div className="demoAccountsBar">
-              <span className="demoAccountsLabel">Quick Demo Sign-In:</span>
-              <div className="demoChips">
-                {DEMO_ACCOUNTS.map((d) => (
-                  <button
-                    key={d.role}
-                    type="button"
-                    className="demoChip"
-                    onClick={() => fillDemo(d)}
-                    title={`Click to fill ${d.role} credentials`}
-                  >
-                    <span className="demoChipRole">{d.role}</span>
-                    <span className="demoChipBadge">{d.badge}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
 
           <form onSubmit={submit} className="form">
             {mode === "register" && (
@@ -212,7 +179,7 @@ function Login() {
                 type="email"
                 value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
-                placeholder={mode === "login" ? "admin@hotel.com" : "guest@example.com"}
+                placeholder="you@example.com"
                 required
               />
             </label>
